@@ -83,6 +83,14 @@ struct LocalizedText {
         value("auto_switch_enabled")
     }
 
+    var automaticSwitchingSection: String {
+        value("automatic_switching_section")
+    }
+
+    var generalSection: String {
+        value("general_section")
+    }
+
     var openAtLogin: String {
         value("open_at_login")
     }
@@ -364,7 +372,7 @@ final class SettingsWindowController: NSWindowController {
     init(onChange: @escaping () -> Void) {
         self.onChange = onChange
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 300),
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 340),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -391,7 +399,7 @@ final class SettingsWindowController: NSWindowController {
         guard let contentView = window?.contentView else { return }
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 12
+        stack.spacing = 10
         stack.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
         stack.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(stack)
@@ -410,9 +418,30 @@ final class SettingsWindowController: NSWindowController {
             view.removeFromSuperview()
         }
 
+        stack.addArrangedSubview(sectionLabel(text.automaticSwitchingSection))
+
         let enable = NSButton(checkboxWithTitle: text.autoSwitchEnabled, target: self, action: #selector(toggleAutoSwitch(_:)))
         enable.state = settings.autoEnabled ? .on : .off
         stack.addArrangedSubview(enable)
+
+        let displays = DisplayInventory.activeExternalDisplays()
+        if displays.isEmpty {
+            let label = NSTextField(labelWithString: text.noExternalDisplays)
+            label.textColor = .secondaryLabelColor
+            stack.addArrangedSubview(indented(label))
+        } else {
+            let allowed = settings.allowedDisplayKeys
+            for display in displays {
+                let checkbox = NSButton(checkboxWithTitle: display.name, target: self, action: #selector(toggleDisplay(_:)))
+                checkbox.identifier = NSUserInterfaceItemIdentifier(display.key)
+                checkbox.toolTip = display.key
+                checkbox.state = allowed.contains(display.key) ? .on : .off
+                stack.addArrangedSubview(indented(checkbox))
+            }
+        }
+
+        stack.addArrangedSubview(separator())
+        stack.addArrangedSubview(sectionLabel(text.generalSection))
 
         let openAtLogin = NSButton(checkboxWithTitle: text.openAtLogin, target: self, action: #selector(toggleOpenAtLogin(_:)))
         openAtLogin.state = LoginItemManager.isEnabled ? .on : .off
@@ -434,34 +463,43 @@ final class SettingsWindowController: NSWindowController {
 
             approvalStack.addArrangedSubview(label)
             approvalStack.addArrangedSubview(button)
-            stack.addArrangedSubview(approvalStack)
+            stack.addArrangedSubview(indented(approvalStack))
         }
 
+        stack.addArrangedSubview(separator())
+        let closeButton = NSButton(title: text.close, target: self, action: #selector(closeWindow))
+        closeButton.bezelStyle = .rounded
+        stack.addArrangedSubview(closeButton)
+    }
+
+    private func sectionLabel(_ title: String) -> NSTextField {
+        let label = NSTextField(labelWithString: title)
+        label.font = .systemFont(ofSize: NSFont.smallSystemFontSize, weight: .semibold)
+        label.textColor = .secondaryLabelColor
+        return label
+    }
+
+    private func separator() -> NSBox {
         let separator = NSBox()
         separator.boxType = .separator
         separator.translatesAutoresizingMaskIntoConstraints = false
         separator.widthAnchor.constraint(equalToConstant: 388).isActive = true
-        stack.addArrangedSubview(separator)
+        return separator
+    }
 
-        let displays = DisplayInventory.activeExternalDisplays()
-        if displays.isEmpty {
-            let label = NSTextField(labelWithString: text.noExternalDisplays)
-            label.textColor = .secondaryLabelColor
-            stack.addArrangedSubview(label)
-        } else {
-            let allowed = settings.allowedDisplayKeys
-            for display in displays {
-                let checkbox = NSButton(checkboxWithTitle: display.name, target: self, action: #selector(toggleDisplay(_:)))
-                checkbox.identifier = NSUserInterfaceItemIdentifier(display.key)
-                checkbox.toolTip = display.key
-                checkbox.state = allowed.contains(display.key) ? .on : .off
-                stack.addArrangedSubview(checkbox)
-            }
-        }
+    private func indented(_ view: NSView) -> NSView {
+        let wrapper = NSStackView()
+        wrapper.orientation = .horizontal
+        wrapper.alignment = .centerY
+        wrapper.spacing = 0
 
-        let closeButton = NSButton(title: text.close, target: self, action: #selector(closeWindow))
-        closeButton.bezelStyle = .rounded
-        stack.addArrangedSubview(closeButton)
+        let spacer = NSView()
+        spacer.translatesAutoresizingMaskIntoConstraints = false
+        spacer.widthAnchor.constraint(equalToConstant: 24).isActive = true
+
+        wrapper.addArrangedSubview(spacer)
+        wrapper.addArrangedSubview(view)
+        return wrapper
     }
 
     @objc private func toggleAutoSwitch(_ sender: NSButton) {

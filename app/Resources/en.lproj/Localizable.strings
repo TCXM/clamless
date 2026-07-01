@@ -7,6 +7,8 @@
 "ok" = "OK";
 "settings" = "Settings...";
 "settings_title" = "Clamless Settings";
+"automatic_switching_section" = "Automatic Switching";
+"general_section" = "General";
 "auto_switch_enabled" = "Enable Automatic Switching";
 "open_at_login" = "Open at Login";
 "login_item_requires_approval" = "Needs approval in System Settings.";
