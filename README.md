@@ -1,8 +1,35 @@
-# Clamless
+<div align="center">
+  <img src="docs/assets/clamless-icon.svg" width="128" alt="Clamless app icon">
 
-Clamless is a small macOS utility for Apple Silicon MacBooks that keeps the lid open while disconnecting the built-in display from the desktop layout.
+  <h1>Clamless</h1>
 
-It is intended for the common desk setup where you want to keep using Touch ID, the camera, keyboard, or microphone, but want macOS to behave as if only the external display exists.
+  <p><strong>Disconnect your MacBook's built-in display without closing the lid.</strong></p>
+  <p>Keep Touch ID, camera, keyboard, and microphone available while macOS behaves as if only the external display exists.</p>
+
+  <p>
+    <a href="https://github.com/TCXM/clamless/actions/workflows/release.yml"><img alt="Release" src="https://github.com/TCXM/clamless/actions/workflows/release.yml/badge.svg"></a>
+    <a href="https://github.com/TCXM/clamless/releases/latest"><img alt="GitHub release" src="https://img.shields.io/github/v/release/TCXM/clamless?style=flat-square"></a>
+    <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square"></a>
+    <img alt="Platform: macOS Apple Silicon" src="https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-black?style=flat-square">
+  </p>
+
+  <p>
+    <a href="#install">Download</a> ·
+    <a href="#menu-bar-app">Menu Bar App</a> ·
+    <a href="#automatic-switching">Automatic Switching</a> ·
+    <a href="#how-it-works">How It Works</a> ·
+    <a href="#cli">CLI</a>
+  </p>
+</div>
+
+> [!NOTE]
+> Clamless targets Apple Silicon MacBooks on macOS 13 or newer. Current public builds are ad-hoc signed but not Apple-notarized yet, so first launch may require right-clicking the app and choosing **Open**.
+
+## Why?
+
+macOS gives you clamshell mode, brightness controls, and display arrangement settings, but none of those are the same as keeping a MacBook open while removing the built-in screen from the desktop layout.
+
+Clamless is for desk setups where you want the MacBook open for Touch ID, camera, keyboard, microphone, or cooling, while the system behaves like the external monitor is the only usable display.
 
 ## What It Does
 
@@ -68,6 +95,14 @@ This is not:
 
 The built-in panel is internal hardware, so it can still appear in lower-level system registries. The important user-facing display topology is the active WindowServer/CoreGraphics layout.
 
+## Install
+
+Download the latest `Clamless-<version>.dmg` from [GitHub Releases](https://github.com/TCXM/clamless/releases/latest), open it, and drag `Clamless.app` into `Applications`.
+
+Until the app is signed with a Developer ID certificate and notarized by Apple,
+macOS may show the standard unidentified-developer warning on first launch. In
+that case, right-click `Clamless.app` and choose **Open**.
+
 ## Requirements
 
 - Apple Silicon MacBook
@@ -75,7 +110,7 @@ The built-in panel is internal hardware, so it can still appear in lower-level s
 - At least one active external display before disconnecting the built-in display
 - Xcode Command Line Tools for building from source
 
-## Build
+## Build From Source
 
 ```sh
 make build
@@ -87,15 +122,6 @@ This creates:
 .build/clamless-display
 .build/Clamless.app
 ```
-
-## Install For Users
-
-Download the latest `Clamless-<version>.dmg` from GitHub Releases, open it, and
-drag `Clamless.app` into `Applications`.
-
-Until the app is signed with a Developer ID certificate and notarized by Apple,
-macOS may show the standard unidentified-developer warning on first launch. In
-that case, right-click `Clamless.app` and choose **Open**.
 
 ## Install From Source
 
@@ -222,6 +248,12 @@ Remove:
 ```sh
 make login-uninstall
 ```
+
+## Privacy
+
+Clamless does not collect telemetry and does not send display information
+anywhere. The menu bar app stores local preferences with macOS `UserDefaults`
+under the `local.clamless.menu` bundle identifier.
 
 ## Caveats
 
