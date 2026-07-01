@@ -648,7 +648,7 @@ final class DisplayConnectionObserver {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let menu = NSMenu()
     private let text = LocalizedText()
     private let autoSettings = AutoSwitchSettings.shared
@@ -692,9 +692,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func buildMenu() {
-        statusItem.button?.title = "Clamless"
+        statusItem.button?.title = ""
         statusItem.button?.toolTip = "Clamless"
-        statusItem.button?.imagePosition = .imageLeading
+        statusItem.button?.imagePosition = .imageOnly
 
         toggleItem = NSMenuItem(title: "", action: #selector(toggleBuiltIn), keyEquivalent: "")
         toggleItem.target = self
@@ -1057,14 +1057,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func updateMenu() {
         let externalCount = lastStatus.physicalExternalCount ?? lastStatus.activeExternalCount ?? 0
         let helperAvailable = helper != nil
-
-        statusItem.button?.title = text.statusTitle(
+        let statusTitle = text.statusTitle(
             status: lastStatus,
             isBusy: isBusy,
             helperAvailable: helperAvailable
         )
+
+        statusItem.button?.title = ""
+        statusItem.button?.toolTip = statusTitle
+        statusItem.button?.setAccessibilityLabel(statusTitle)
         statusItem.button?.image = statusIcon(for: lastStatus)
-        statusItem.button?.imagePosition = .imageLeading
+        statusItem.button?.imagePosition = .imageOnly
 
         toggleItem.title = text.toggleTitle(
             status: lastStatus,
