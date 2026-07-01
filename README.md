@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/assets/clamless-readme-icon.png" width="152" alt="Clamless app icon">
+  <img src="docs/assets/clamless-readme-icon.png" width="184" alt="Clamless app icon">
 
   <h1>Clamless</h1>
 
