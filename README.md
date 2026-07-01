@@ -98,13 +98,7 @@ The built-in panel is internal hardware, so it can still appear in lower-level s
 
 ## Install
 
-Install with Homebrew:
-
-```sh
-brew install --cask TCXM/clamless/clamless
-```
-
-Or download the latest `Clamless-<version>.dmg` from [GitHub Releases](https://github.com/TCXM/clamless/releases/latest), open it, and drag `Clamless.app` into `Applications`.
+Download the latest `Clamless-<version>.dmg` from [GitHub Releases](https://github.com/TCXM/clamless/releases/latest), open it, and drag `Clamless.app` into `Applications`.
 
 Until the app is signed with a Developer ID certificate and notarized by Apple,
 macOS may show the standard unidentified-developer warning on first launch. In
