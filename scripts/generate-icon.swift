@@ -53,7 +53,7 @@ func drawIcon(size pixels: Int) -> NSImage {
     glow.shadowOffset = .zero
     glow.set()
 
-    let external = CGRect(x: 202 * scale, y: 445 * scale, width: 620 * scale, height: 350 * scale)
+    let external = CGRect(x: 202 * scale, y: 468 * scale, width: 620 * scale, height: 330 * scale)
     fillRounded(external, radius: 72 * scale, color: color(0x182936))
     strokeRounded(external.insetBy(dx: 8 * scale, dy: 8 * scale),
                   radius: 62 * scale,
@@ -62,7 +62,7 @@ func drawIcon(size pixels: Int) -> NSImage {
 
     NSShadow().set()
 
-    let laptop = CGRect(x: 258 * scale, y: 278 * scale, width: 508 * scale, height: 280 * scale)
+    let laptop = CGRect(x: 280 * scale, y: 290 * scale, width: 464 * scale, height: 290 * scale)
     fillRounded(laptop, radius: 56 * scale, color: color(0x081016))
     strokeRounded(laptop, radius: 56 * scale, color: color(0xf4fbff), width: 18 * scale)
 
@@ -77,14 +77,14 @@ func drawIcon(size pixels: Int) -> NSImage {
     slashShadow.shadowBlurRadius = 16 * scale
     slashShadow.shadowOffset = NSSize(width: 0, height: -6 * scale)
     slashShadow.set()
-    strokeLine(from: CGPoint(x: 332 * scale, y: 506 * scale),
-               to: CGPoint(x: 692 * scale, y: 330 * scale),
+    strokeLine(from: CGPoint(x: 354 * scale, y: 390 * scale),
+               to: CGPoint(x: 674 * scale, y: 532 * scale),
                color: color(0xff6b5f),
                width: 54 * scale)
 
     NSShadow().set()
-    strokeLine(from: CGPoint(x: 332 * scale, y: 506 * scale),
-               to: CGPoint(x: 692 * scale, y: 330 * scale),
+    strokeLine(from: CGPoint(x: 354 * scale, y: 390 * scale),
+               to: CGPoint(x: 674 * scale, y: 532 * scale),
                color: color(0xffd166),
                width: 22 * scale)
 
