@@ -8,6 +8,10 @@
 "settings" = "设置...";
 "settings_title" = "Clamless 设置";
 "auto_switch_enabled" = "启用自动开关";
+"open_at_login" = "开机自启";
+"login_item_requires_approval" = "需要在系统设置中批准。";
+"open_login_items_settings" = "打开登录项";
+"login_item_error_title" = "设置开机自启失败";
 "no_external_displays" = "没有连接外接显示器。";
 "close" = "关闭";
 

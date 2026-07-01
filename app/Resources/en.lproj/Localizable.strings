@@ -8,6 +8,10 @@
 "settings" = "Settings...";
 "settings_title" = "Clamless Settings";
 "auto_switch_enabled" = "Enable Automatic Switching";
+"open_at_login" = "Open at Login";
+"login_item_requires_approval" = "Needs approval in System Settings.";
+"open_login_items_settings" = "Open Login Items";
+"login_item_error_title" = "Open at Login Failed";
 "no_external_displays" = "No external displays connected.";
 "close" = "Close";
 

@@ -22,7 +22,8 @@ clang "$ROOT/src/helper/clamless-display.c" \
 swiftc "$ROOT/src/menubar/main.swift" \
   -o "$APP/Contents/MacOS/ClamlessMenu" \
   -framework Cocoa \
-  -framework IOKit
+  -framework IOKit \
+  -framework ServiceManagement
 
 cp "$ROOT/app/Info.plist" "$APP/Contents/Info.plist"
 if [[ -d "$ROOT/app/Resources" ]]; then

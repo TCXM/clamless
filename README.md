@@ -147,15 +147,15 @@ open "$HOME/Applications/Clamless.app"
 Public releases are built by GitHub Actions when a version tag is pushed:
 
 ```sh
-git tag -a v0.1.1 -m "Clamless 0.1.1"
-git push origin v0.1.1
+git tag -a v0.1.2 -m "Clamless 0.1.2"
+git push origin v0.1.2
 ```
 
 The release workflow builds the DMG on a macOS arm64 runner, verifies the
 checksum, creates a GitHub Release, and uploads the `.dmg` and `.sha256` files.
 
 If the tag already existed before the workflow was added, run the `Release`
-workflow manually and set `release_tag` to the existing tag, such as `v0.1.1`.
+workflow manually and set `release_tag` to the existing tag, such as `v0.1.2`.
 
 For local testing, run:
 
@@ -239,6 +239,11 @@ clamless-display panel-request 1
 `panel-on` only wakes the physical built-in panel. It does not restore the display into the macOS layout.
 
 ## Start At Login
+
+Open Clamless Settings and enable **Open at Login**.
+
+For source builds, the helper scripts call the same macOS Login Items API used
+by the app and remove older LaunchAgent files if they exist:
 
 ```sh
 make login-install

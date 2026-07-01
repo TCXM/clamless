@@ -1,6 +1,7 @@
 import Cocoa
 import Foundation
 import IOKit
+import ServiceManagement
 
 enum LayoutState: Equatable {
     case connected
@@ -80,6 +81,22 @@ struct LocalizedText {
 
     var autoSwitchEnabled: String {
         value("auto_switch_enabled")
+    }
+
+    var openAtLogin: String {
+        value("open_at_login")
+    }
+
+    var loginItemRequiresApproval: String {
+        value("login_item_requires_approval")
+    }
+
+    var openLoginItemsSettings: String {
+        value("open_login_items_settings")
+    }
+
+    var loginItemErrorTitle: String {
+        value("login_item_error_title")
     }
 
     var noExternalDisplays: String {
@@ -224,6 +241,66 @@ final class AutoSwitchSettings {
     }
 }
 
+enum LoginItemManager {
+    static var status: SMAppService.Status {
+        SMAppService.mainApp.status
+    }
+
+    static var isEnabled: Bool {
+        status == .enabled
+    }
+
+    static func setEnabled(_ enabled: Bool) throws {
+        if enabled {
+            guard status != .enabled else { return }
+            try SMAppService.mainApp.register()
+        } else {
+            guard status != .notRegistered, status != .notFound else { return }
+            try SMAppService.mainApp.unregister()
+        }
+    }
+
+    static func statusDescription(_ status: SMAppService.Status = SMAppService.mainApp.status) -> String {
+        switch status {
+        case .notRegistered, .notFound:
+            return "disabled"
+        case .enabled:
+            return "enabled"
+        case .requiresApproval:
+            return "requires_approval"
+        @unknown default:
+            return "unknown"
+        }
+    }
+
+    static func runCommandIfRequested(_ arguments: [String]) -> Bool {
+        guard let command = arguments.dropFirst().first else {
+            return false
+        }
+
+        do {
+            switch command {
+            case "--register-login-item":
+                try setEnabled(true)
+                print("login item: \(statusDescription())")
+                return true
+            case "--unregister-login-item":
+                try setEnabled(false)
+                print("login item: \(statusDescription())")
+                return true
+            case "--login-item-status":
+                print("login item: \(statusDescription())")
+                return true
+            default:
+                return false
+            }
+        } catch {
+            fputs("login item failed: \(error.localizedDescription)\n", stderr)
+            exit(1)
+        }
+    }
+}
+
 struct ExternalDisplayInfo {
     let id: CGDirectDisplayID
     let key: String
@@ -287,7 +364,7 @@ final class SettingsWindowController: NSWindowController {
     init(onChange: @escaping () -> Void) {
         self.onChange = onChange
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 220),
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 300),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -337,10 +414,33 @@ final class SettingsWindowController: NSWindowController {
         enable.state = settings.autoEnabled ? .on : .off
         stack.addArrangedSubview(enable)
 
+        let openAtLogin = NSButton(checkboxWithTitle: text.openAtLogin, target: self, action: #selector(toggleOpenAtLogin(_:)))
+        openAtLogin.state = LoginItemManager.isEnabled ? .on : .off
+        stack.addArrangedSubview(openAtLogin)
+
+        if LoginItemManager.status == .requiresApproval {
+            let approvalStack = NSStackView()
+            approvalStack.orientation = .horizontal
+            approvalStack.alignment = .centerY
+            approvalStack.spacing = 8
+
+            let label = NSTextField(labelWithString: text.loginItemRequiresApproval)
+            label.textColor = .secondaryLabelColor
+            label.lineBreakMode = .byWordWrapping
+            label.maximumNumberOfLines = 2
+
+            let button = NSButton(title: text.openLoginItemsSettings, target: self, action: #selector(openLoginItemsSettings))
+            button.bezelStyle = .rounded
+
+            approvalStack.addArrangedSubview(label)
+            approvalStack.addArrangedSubview(button)
+            stack.addArrangedSubview(approvalStack)
+        }
+
         let separator = NSBox()
         separator.boxType = .separator
         separator.translatesAutoresizingMaskIntoConstraints = false
-        separator.widthAnchor.constraint(equalToConstant: 348).isActive = true
+        separator.widthAnchor.constraint(equalToConstant: 388).isActive = true
         stack.addArrangedSubview(separator)
 
         let displays = DisplayInventory.activeExternalDisplays()
@@ -369,6 +469,20 @@ final class SettingsWindowController: NSWindowController {
         onChange()
     }
 
+    @objc private func toggleOpenAtLogin(_ sender: NSButton) {
+        do {
+            try LoginItemManager.setEnabled(sender.state == .on)
+        } catch {
+            sender.state = LoginItemManager.isEnabled ? .on : .off
+            showLoginItemError(error)
+        }
+        rebuild()
+    }
+
+    @objc private func openLoginItemsSettings() {
+        SMAppService.openSystemSettingsLoginItems()
+    }
+
     @objc private func toggleDisplay(_ sender: NSButton) {
         guard let key = sender.identifier?.rawValue else { return }
         var allowed = settings.allowedDisplayKeys
@@ -383,6 +497,21 @@ final class SettingsWindowController: NSWindowController {
 
     @objc private func closeWindow() {
         window?.close()
+    }
+
+    private func showLoginItemError(_ error: Error) {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = text.loginItemErrorTitle
+        alert.informativeText = error.localizedDescription
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: text.ok)
+        if LoginItemManager.status == .requiresApproval {
+            alert.addButton(withTitle: text.openLoginItemsSettings)
+        }
+        if alert.runModal() == .alertSecondButtonReturn {
+            SMAppService.openSystemSettingsLoginItems()
+        }
     }
 }
 
@@ -980,7 +1109,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-let app = NSApplication.shared
-let delegate = AppDelegate()
-app.delegate = delegate
-app.run()
+if !LoginItemManager.runCommandIfRequested(CommandLine.arguments) {
+    let app = NSApplication.shared
+    let delegate = AppDelegate()
+    app.delegate = delegate
+    app.run()
+}
