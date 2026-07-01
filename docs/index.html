@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Clamless disconnects the built-in MacBook display while keeping the lid open, so Touch ID, camera, keyboard, and microphone remain available.">
+    <meta property="og:title" content="Clamless">
+    <meta property="og:description" content="Disconnect your MacBook's built-in display without closing the lid.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="assets/clamless-icon.svg">
+    <meta name="theme-color" content="#101820">
+    <title>Clamless - Open-lid built-in display disconnect for MacBook</title>
+    <link rel="icon" href="assets/clamless-icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#">
+        <img src="assets/clamless-icon.svg" width="34" height="34" alt="">
+        <span>Clamless</span>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a href="#install">Install</a>
+        <a href="#how">How it works</a>
+        <a href="#limits">Limits</a>
+        <a class="nav-button" href="https://github.com/TCXM/clamless">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-scene" aria-hidden="true">
+          <div class="display display-external">
+            <div class="display-toolbar">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <div class="display-line wide"></div>
+            <div class="display-line medium"></div>
+            <div class="display-grid">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+          <div class="laptop">
+            <div class="laptop-screen">
+              <div class="slash"></div>
+            </div>
+            <div class="laptop-base"></div>
+          </div>
+          <div class="desk-line"></div>
+        </div>
+
+        <div class="hero-content">
+          <p class="eyebrow">macOS Apple Silicon</p>
+          <h1 id="hero-title">Open the lid. Keep only the external display.</h1>
+          <p class="hero-copy">
+            Clamless disconnects the built-in MacBook display from the macOS screen layout while keeping Touch ID, camera, keyboard, and microphone available.
+          </p>
+          <div class="hero-actions">
+            <a class="primary-action" href="https://github.com/TCXM/clamless/releases/latest">Download DMG</a>
+            <a class="secondary-action" href="#how">See how it works</a>
+          </div>
+          <dl class="hero-facts">
+            <div>
+              <dt>Layout</dt>
+              <dd>built-in removed</dd>
+            </div>
+            <div>
+              <dt>Panel</dt>
+              <dd>powered off</dd>
+            </div>
+            <div>
+              <dt>Control</dt>
+              <dd>menu bar</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="section intro-section">
+        <div class="section-copy">
+          <p class="section-kicker">The desk setup macOS does not expose</p>
+          <h2>Not dimming. Not a black overlay. Not clamshell mode.</h2>
+          <p>
+            Clamless is for MacBook users who want the machine open on the desk but do not want windows, the cursor, or display arrangement state leaking onto the built-in panel.
+          </p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature">
+            <span class="feature-icon">01</span>
+            <h3>Disconnect the layout</h3>
+            <p>The built-in display is removed from the active WindowServer arrangement, so the cursor cannot enter it.</p>
+          </article>
+          <article class="feature">
+            <span class="feature-icon">02</span>
+            <h3>Turn off the panel</h3>
+            <p>The Apple Silicon built-in panel framebuffer is asked to enter a low-power off state after layout removal.</p>
+          </article>
+          <article class="feature">
+            <span class="feature-icon">03</span>
+            <h3>Restore safely</h3>
+            <p>When the external display disappears, Clamless prioritizes restoring the built-in display over trusting stale plug state.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="install" class="section install-section">
+        <div class="section-copy">
+          <p class="section-kicker">Install</p>
+          <h2>Drag, open, use from the menu bar.</h2>
+          <p>
+            Download the latest DMG, drag Clamless into Applications, then launch it. Current public builds are ad-hoc signed, so macOS may require right-clicking the app and choosing Open on first launch.
+          </p>
+        </div>
+        <ol class="install-steps">
+          <li>
+            <span>Download</span>
+            <a href="https://github.com/TCXM/clamless/releases/latest">Latest release</a>
+          </li>
+          <li>
+            <span>Install</span>
+            <p>Drag Clamless.app into Applications.</p>
+          </li>
+          <li>
+            <span>Configure</span>
+            <p>Choose trusted external displays for automatic switching.</p>
+          </li>
+        </ol>
+      </section>
+
+      <section id="how" class="section how-section">
+        <div class="section-copy">
+          <p class="section-kicker">How it works</p>
+          <h2>Two display layers, one menu bar switch.</h2>
+        </div>
+        <div class="timeline">
+          <article>
+            <h3>SkyLight layout control</h3>
+            <p>Clamless uses private SkyLight display topology calls to disable or enable the built-in display in the active desktop arrangement.</p>
+          </article>
+          <article>
+            <h3>IOMobileFramebuffer panel power</h3>
+            <p>After layout removal, it requests panel power changes through Apple Silicon framebuffer APIs so the internal panel goes dark.</p>
+          </article>
+          <article>
+            <h3>Unplug-first recovery</h3>
+            <p>Automatic restore combines 1-second polling, display callbacks, IORegistry events, and a layout-level safety check to recover when an external display is unplugged.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section command-section">
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <pre><code>clamless-display status
+clamless-display off --commit session
+clamless-display on --commit session</code></pre>
+        </div>
+        <div class="section-copy">
+          <p class="section-kicker">CLI included</p>
+          <h2>Script it when the menu is not enough.</h2>
+          <p>
+            The bundled helper exposes the same display control path used by the app. It is useful for debugging, automation, and verifying the current display state.
+          </p>
+        </div>
+      </section>
+
+      <section id="limits" class="section limits-section">
+        <div class="section-copy">
+          <p class="section-kicker">Reality check</p>
+          <h2>Pragmatic, not official.</h2>
+          <p>
+            Clamless relies on private macOS APIs. That is how it gets the behavior macOS does not expose in System Settings, but Apple can change those interfaces in future releases.
+          </p>
+        </div>
+        <div class="limit-list">
+          <p>No telemetry.</p>
+          <p>No black overlay window.</p>
+          <p>No brightness-only trick.</p>
+          <p>No claim that the built-in panel disappears from IORegistry.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Clamless</span>
+      <a href="https://github.com/TCXM/clamless">GitHub</a>
+      <a href="https://github.com/TCXM/clamless/releases/latest">Download</a>
+      <a href="https://github.com/TCXM/clamless/blob/main/LICENSE">MIT License</a>
+    </footer>
+  </body>
+</html>

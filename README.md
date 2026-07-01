@@ -14,6 +14,7 @@
   </p>
 
   <p>
+    <a href="https://tcxm.github.io/clamless/">Website</a> ·
     <a href="#install">Download</a> ·
     <a href="#menu-bar-app">Menu Bar App</a> ·
     <a href="#automatic-switching">Automatic Switching</a> ·
