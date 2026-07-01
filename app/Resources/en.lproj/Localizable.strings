@@ -1,0 +1,32 @@
+"quit" = "Quit Clamless";
+"helper_missing_title" = "Helper Missing";
+"helper_missing_message" = "Could not find clamless-display.";
+"unknown_status_title" = "Status Unknown";
+"unknown_status_message" = "Refreshing the built-in display status.";
+"no_more_info" = "No additional details.";
+"ok" = "OK";
+"settings" = "Settings...";
+"settings_title" = "Clamless Settings";
+"auto_switch_enabled" = "Enable Automatic Switching";
+"no_external_displays" = "No external displays connected.";
+"close" = "Close";
+
+"status_busy" = "Display...";
+"status_helper_missing" = "Display ?";
+"status_connected" = "Built-in On";
+"status_disconnected" = "Built-in Off";
+"status_needs_off_repair" = "Built-in Fix";
+"status_unknown" = "Built-in ?";
+
+"toggle_busy" = "Working...";
+"toggle_helper_missing" = "Helper Missing";
+"toggle_connected" = "Turn Built-in Display Off";
+"toggle_connected_no_external" = "Connect an External Display First";
+"toggle_disconnected" = "Turn Built-in Display On";
+"toggle_needs_off_repair" = "Finish Turning Off";
+"toggle_unknown" = "Refresh Status";
+
+"action_connected" = "Turn Off Built-in Display";
+"action_disconnected" = "Turn On Built-in Display";
+"action_unknown" = "Refresh Status";
+"failure_title_format" = "%@ Failed";

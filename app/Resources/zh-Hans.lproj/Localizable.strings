@@ -1,0 +1,32 @@
+"quit" = "退出 Clamless";
+"helper_missing_title" = "缺少 helper";
+"helper_missing_message" = "没有找到 clamless-display。";
+"unknown_status_title" = "状态未知";
+"unknown_status_message" = "正在重新读取内屏状态。";
+"no_more_info" = "没有更多信息。";
+"ok" = "好";
+"settings" = "设置...";
+"settings_title" = "Clamless 设置";
+"auto_switch_enabled" = "启用自动开关";
+"no_external_displays" = "没有连接外接显示器。";
+"close" = "关闭";
+
+"status_busy" = "内屏...";
+"status_helper_missing" = "内屏 ?";
+"status_connected" = "内屏 开";
+"status_disconnected" = "内屏 关";
+"status_needs_off_repair" = "内屏 待修复";
+"status_unknown" = "内屏 ?";
+
+"toggle_busy" = "处理中...";
+"toggle_helper_missing" = "缺少 helper";
+"toggle_connected" = "关闭内屏";
+"toggle_connected_no_external" = "关闭内屏（需要外接屏）";
+"toggle_disconnected" = "恢复内屏";
+"toggle_needs_off_repair" = "重新关闭内屏";
+"toggle_unknown" = "重新读取状态";
+
+"action_connected" = "关闭内屏";
+"action_disconnected" = "恢复内屏";
+"action_unknown" = "刷新状态";
+"failure_title_format" = "%@失败";
