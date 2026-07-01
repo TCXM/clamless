@@ -7,9 +7,11 @@
     <meta property="og:title" content="Clamless">
     <meta property="og:description" content="Disconnect your MacBook's built-in display without closing the lid.">
     <meta property="og:type" content="website">
+    <meta property="og:url" content="https://clamless.yuxiaozhu.me/">
     <meta property="og:image" content="assets/clamless-icon.svg">
     <meta name="theme-color" content="#101820">
     <title>Clamless - Open-lid built-in display disconnect for MacBook</title>
+    <link rel="canonical" href="https://clamless.yuxiaozhu.me/">
     <link rel="icon" href="assets/clamless-icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="styles.css">
   </head>
@@ -110,12 +112,16 @@
       <section id="install" class="section install-section">
         <div class="section-copy">
           <p class="section-kicker">Install</p>
-          <h2>Drag, open, use from the menu bar.</h2>
+          <h2>Install once, use from the menu bar.</h2>
           <p>
-            Download the latest DMG, drag Clamless into Applications, then launch it. Current public builds are ad-hoc signed, so macOS may require right-clicking the app and choosing Open on first launch.
+            Install with Homebrew or download the latest DMG, then launch Clamless from Applications. Current public builds are ad-hoc signed, so macOS may require right-clicking the app and choosing Open on first launch.
           </p>
         </div>
         <ol class="install-steps">
+          <li>
+            <span>Homebrew</span>
+            <code>brew install --cask TCXM/clamless/clamless</code>
+          </li>
           <li>
             <span>Download</span>
             <a href="https://github.com/TCXM/clamless/releases/latest">Latest release</a>

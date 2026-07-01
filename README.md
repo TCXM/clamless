@@ -14,7 +14,7 @@
   </p>
 
   <p>
-    <a href="https://tcxm.github.io/clamless/">Website</a> ·
+    <a href="https://clamless.yuxiaozhu.me/">Website</a> ·
     <a href="#install">Download</a> ·
     <a href="#menu-bar-app">Menu Bar App</a> ·
     <a href="#automatic-switching">Automatic Switching</a> ·
@@ -98,7 +98,13 @@ The built-in panel is internal hardware, so it can still appear in lower-level s
 
 ## Install
 
-Download the latest `Clamless-<version>.dmg` from [GitHub Releases](https://github.com/TCXM/clamless/releases/latest), open it, and drag `Clamless.app` into `Applications`.
+Install with Homebrew:
+
+```sh
+brew install --cask TCXM/clamless/clamless
+```
+
+Or download the latest `Clamless-<version>.dmg` from [GitHub Releases](https://github.com/TCXM/clamless/releases/latest), open it, and drag `Clamless.app` into `Applications`.
 
 Until the app is signed with a Developer ID certificate and notarized by Apple,
 macOS may show the standard unidentified-developer warning on first launch. In
@@ -147,15 +153,15 @@ open "$HOME/Applications/Clamless.app"
 Public releases are built by GitHub Actions when a version tag is pushed:
 
 ```sh
-git tag -a v0.1.0 -m "Clamless 0.1.0"
-git push origin v0.1.0
+git tag -a v0.1.1 -m "Clamless 0.1.1"
+git push origin v0.1.1
 ```
 
 The release workflow builds the DMG on a macOS arm64 runner, verifies the
 checksum, creates a GitHub Release, and uploads the `.dmg` and `.sha256` files.
 
 If the tag already existed before the workflow was added, run the `Release`
-workflow manually and set `release_tag` to the existing tag, such as `v0.1.0`.
+workflow manually and set `release_tag` to the existing tag, such as `v0.1.1`.
 
 For local testing, run:
 

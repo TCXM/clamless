@@ -388,7 +388,8 @@ h1 {
 
 .feature p,
 .timeline p,
-.install-steps p {
+.install-steps p,
+.install-steps code {
   margin: 0;
   font-size: 15px;
 }
@@ -427,6 +428,14 @@ h1 {
 .install-steps a {
   color: var(--teal);
   font-weight: 760;
+}
+
+.install-steps code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--teal);
+  font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  font-weight: 700;
 }
 
 .timeline {
