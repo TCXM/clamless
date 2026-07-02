@@ -39,6 +39,116 @@ struct HelperResult {
     }
 }
 
+struct UpdateInfo {
+    let currentVersion: String
+    let latestVersion: String
+    let releaseURL: URL
+}
+
+enum UpdateCheckResult {
+    case available(UpdateInfo)
+    case upToDate(currentVersion: String)
+}
+
+enum UpdateCheckError: LocalizedError {
+    case httpStatus(Int)
+    case invalidResponse
+    case missingCurrentVersion
+
+    var errorDescription: String? {
+        switch self {
+        case .httpStatus(let statusCode):
+            return "GitHub returned HTTP \(statusCode)."
+        case .invalidResponse:
+            return "GitHub returned an invalid release response."
+        case .missingCurrentVersion:
+            return "The current app version could not be read."
+        }
+    }
+}
+
+enum UpdateChecker {
+    private struct GitHubRelease: Decodable {
+        let tagName: String
+        let htmlURL: URL
+
+        enum CodingKeys: String, CodingKey {
+            case tagName = "tag_name"
+            case htmlURL = "html_url"
+        }
+    }
+
+    private static let latestReleaseURL = URL(string: "https://api.github.com/repos/TCXM/clamless/releases/latest")!
+
+    static func check(completion: @escaping (Result<UpdateCheckResult, Error>) -> Void) {
+        guard let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+              !currentVersion.isEmpty else {
+            completion(.failure(UpdateCheckError.missingCurrentVersion))
+            return
+        }
+
+        var request = URLRequest(url: latestReleaseURL)
+        request.timeoutInterval = 10
+        request.setValue("Clamless/\(currentVersion)", forHTTPHeaderField: "User-Agent")
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  let data else {
+                completion(.failure(UpdateCheckError.invalidResponse))
+                return
+            }
+
+            guard (200..<300).contains(httpResponse.statusCode) else {
+                completion(.failure(UpdateCheckError.httpStatus(httpResponse.statusCode)))
+                return
+            }
+
+            do {
+                let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
+                let latestVersion = normalizedVersion(release.tagName)
+                if isVersion(latestVersion, newerThan: currentVersion) {
+                    completion(.success(.available(UpdateInfo(
+                        currentVersion: currentVersion,
+                        latestVersion: latestVersion,
+                        releaseURL: release.htmlURL
+                    ))))
+                } else {
+                    completion(.success(.upToDate(currentVersion: currentVersion)))
+                }
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+
+    private static func normalizedVersion(_ version: String) -> String {
+        version
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingPrefix("v")
+            .trimmingPrefix("V")
+            .split(whereSeparator: { $0 == "-" || $0 == "+" })
+            .first
+            .map(String.init) ?? version
+    }
+
+    private static func isVersion(_ latestVersion: String, newerThan currentVersion: String) -> Bool {
+        normalizedVersion(latestVersion)
+            .compare(normalizedVersion(currentVersion), options: [.numeric, .caseInsensitive]) == .orderedDescending
+    }
+}
+
+extension String {
+    fileprivate func trimmingPrefix(_ prefix: String) -> String {
+        hasPrefix(prefix) ? String(dropFirst(prefix.count)) : self
+    }
+}
+
 struct LocalizedText {
     private func value(_ key: String) -> String {
         NSLocalizedString(key, bundle: .main, comment: "")
@@ -74,6 +184,34 @@ struct LocalizedText {
 
     var settings: String {
         value("settings")
+    }
+
+    var checkForUpdates: String {
+        value("check_for_updates")
+    }
+
+    var checkingForUpdates: String {
+        value("checking_for_updates")
+    }
+
+    var updateAvailableTitle: String {
+        value("update_available_title")
+    }
+
+    var downloadUpdate: String {
+        value("download_update")
+    }
+
+    var later: String {
+        value("later")
+    }
+
+    var upToDateTitle: String {
+        value("up_to_date_title")
+    }
+
+    var updateCheckFailedTitle: String {
+        value("update_check_failed_title")
     }
 
     var settingsTitle: String {
@@ -169,6 +307,18 @@ struct LocalizedText {
 
     func failureTitle(for action: String) -> String {
         String(format: value("failure_title_format"), action)
+    }
+
+    func updateAvailableMessage(latestVersion: String, currentVersion: String) -> String {
+        String(format: value("update_available_message_format"), latestVersion, currentVersion)
+    }
+
+    func upToDateMessage(currentVersion: String) -> String {
+        String(format: value("up_to_date_message_format"), currentVersion)
+    }
+
+    func updateCheckFailedMessage(_ reason: String) -> String {
+        String(format: value("update_check_failed_message_format"), reason)
     }
 }
 
@@ -718,6 +868,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let text = LocalizedText()
     private let autoSettings = AutoSwitchSettings.shared
     private var toggleItem = NSMenuItem()
+    private var checkUpdatesItem = NSMenuItem()
     private var lastStatus = DisplayStatus(
         layout: .unknown,
         online: nil,
@@ -730,6 +881,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rawText: ""
     )
     private var isBusy = false
+    private var isCheckingForUpdates = false
     private var refreshTimer: Timer?
     private var displayConnectionObserver: DisplayConnectionObserver?
     private var autoPausedAtPhysicalExternalCount: Int?
@@ -799,6 +951,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let settings = NSMenuItem(title: text.settings, action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
+
+        checkUpdatesItem = NSMenuItem(title: text.checkForUpdates, action: #selector(checkForUpdates), keyEquivalent: "")
+        checkUpdatesItem.target = self
+        menu.addItem(checkUpdatesItem)
         menu.addItem(.separator())
 
         let quit = NSMenuItem(title: text.quit, action: #selector(quit), keyEquivalent: "q")
@@ -837,6 +993,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         settingsWindowController?.showWindow(nil)
+    }
+
+    @objc private func checkForUpdates() {
+        guard !isCheckingForUpdates else { return }
+
+        isCheckingForUpdates = true
+        updateMenu()
+
+        UpdateChecker.check { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.isCheckingForUpdates = false
+                self.updateMenu()
+
+                switch result {
+                case .success(.available(let info)):
+                    self.showUpdateAvailable(info)
+                case .success(.upToDate(let currentVersion)):
+                    self.showMessage(
+                        title: self.text.upToDateTitle,
+                        text: self.text.upToDateMessage(currentVersion: currentVersion)
+                    )
+                case .failure(let error):
+                    self.showMessage(
+                        title: self.text.updateCheckFailedTitle,
+                        text: self.text.updateCheckFailedMessage(error.localizedDescription)
+                    )
+                }
+            }
+        }
     }
 
     @objc private func quit() {
@@ -1249,6 +1435,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let canTurnOn = lastStatus.layout == .disconnected
         let canRefresh = lastStatus.layout == .unknown
         toggleItem.isEnabled = helperAvailable && !isBusy && (canTurnOff || canTurnOn || canRefresh)
+
+        checkUpdatesItem.title = isCheckingForUpdates ? text.checkingForUpdates : text.checkForUpdates
+        checkUpdatesItem.isEnabled = !isCheckingForUpdates
     }
 
     private func statusIcon(for status: DisplayStatus) -> NSImage? {
@@ -1278,6 +1467,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.alertStyle = .warning
         alert.addButton(withTitle: self.text.ok)
         alert.runModal()
+    }
+
+    private func showUpdateAvailable(_ info: UpdateInfo) {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = text.updateAvailableTitle
+        alert.informativeText = text.updateAvailableMessage(
+            latestVersion: info.latestVersion,
+            currentVersion: info.currentVersion
+        )
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: text.downloadUpdate)
+        alert.addButton(withTitle: text.later)
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            NSWorkspace.shared.open(info.releaseURL)
+        }
     }
 }
 

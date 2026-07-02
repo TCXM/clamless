@@ -6,6 +6,16 @@
 "no_more_info" = "No additional details.";
 "ok" = "OK";
 "settings" = "Settings...";
+"check_for_updates" = "Check for Updates...";
+"checking_for_updates" = "Checking for Updates...";
+"update_available_title" = "Update Available";
+"update_available_message_format" = "Clamless %@ is available. You are using %@.";
+"download_update" = "Download";
+"later" = "Later";
+"up_to_date_title" = "Clamless is Up to Date";
+"up_to_date_message_format" = "You are using the latest version (%@).";
+"update_check_failed_title" = "Update Check Failed";
+"update_check_failed_message_format" = "Could not check GitHub Releases: %@";
 "settings_title" = "Clamless Settings";
 "automatic_switching_section" = "Automatic Switching";
 "general_section" = "General";

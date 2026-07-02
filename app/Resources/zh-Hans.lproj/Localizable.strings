@@ -6,6 +6,16 @@
 "no_more_info" = "没有更多信息。";
 "ok" = "好";
 "settings" = "设置...";
+"check_for_updates" = "检查更新...";
+"checking_for_updates" = "正在检查更新...";
+"update_available_title" = "发现新版本";
+"update_available_message_format" = "Clamless %@ 已可下载。当前版本是 %@。";
+"download_update" = "下载";
+"later" = "稍后";
+"up_to_date_title" = "Clamless 已是最新版本";
+"up_to_date_message_format" = "当前已经是最新版本（%@）。";
+"update_check_failed_title" = "检查更新失败";
+"update_check_failed_message_format" = "无法检查 GitHub Releases：%@";
 "settings_title" = "Clamless 设置";
 "automatic_switching_section" = "自动开关";
 "general_section" = "通用";
