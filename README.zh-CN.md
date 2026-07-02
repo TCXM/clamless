@@ -14,7 +14,6 @@
   </p>
 
   <p>
-    <a href="README.md">English</a> ·
     <a href="https://clamless.yuxiaozhu.me/zh.html">官网</a> ·
     <a href="#安装">下载</a> ·
     <a href="#菜单栏应用">菜单栏应用</a> ·

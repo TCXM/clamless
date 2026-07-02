@@ -23,6 +23,7 @@ html {
 
 body {
   margin: 0;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
@@ -265,10 +266,10 @@ p {
 }
 
 h1 {
-  max-width: 760px;
+  max-width: 520px;
   margin: 0;
-  font-size: 92px;
-  line-height: 0.94;
+  font-size: 52px;
+  line-height: 1.12;
 }
 
 html:lang(zh-Hans) body {
@@ -308,7 +309,8 @@ html:lang(zh-Hans) .timeline h3 {
   max-width: 590px;
   margin: 28px 0 0;
   color: var(--muted);
-  font-size: 21px;
+  font-size: 19px;
+  line-height: 1.65;
 }
 
 .hero-actions {
@@ -375,8 +377,8 @@ html:lang(zh-Hans) .timeline h3 {
 
 .section h2 {
   margin: 0;
-  font-size: 54px;
-  line-height: 1.04;
+  font-size: 44px;
+  line-height: 1.12;
 }
 
 .section p {
@@ -585,7 +587,7 @@ pre {
   }
 
   h1 {
-    font-size: 68px;
+    font-size: 40px;
   }
 
   html:lang(zh-Hans) h1 {
@@ -595,7 +597,7 @@ pre {
   }
 
   .section h2 {
-    font-size: 44px;
+    font-size: 38px;
   }
 
   html:lang(zh-Hans) .section h2 {
@@ -636,15 +638,19 @@ pre {
   }
 
   .hero {
-    padding-inline: 18px;
+    padding-inline: 18px 32px;
   }
 
   .hero-scene {
     display: none;
   }
 
+  .hero-content {
+    max-width: calc(100vw - 72px);
+  }
+
   h1 {
-    font-size: 56px;
+    font-size: 32px;
   }
 
   html:lang(zh-Hans) h1 {
@@ -654,6 +660,8 @@ pre {
 
   .hero-copy {
     font-size: 18px;
+    max-width: 100%;
+    overflow-wrap: break-word;
   }
 
   html:lang(zh-Hans) .hero-copy {
@@ -661,12 +669,30 @@ pre {
   }
 
   .hero-facts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
   }
 
   .hero-facts div {
-    flex: 1;
     min-width: 0;
+  }
+
+  .hero-facts dt {
+    font-size: 11px;
+  }
+
+  .hero-facts dd {
+    overflow-wrap: break-word;
+    font-size: 14px;
+  }
+
+  .section-copy {
+    max-width: 100%;
+  }
+
+  .section-kicker {
+    overflow-wrap: break-word;
   }
 
   .hero-actions {
@@ -680,12 +706,12 @@ pre {
   }
 
   .section {
-    width: calc(100% - 36px);
+    width: calc(100% - 50px);
     padding: 70px 0;
   }
 
   .section h2 {
-    font-size: 36px;
+    font-size: 30px;
   }
 
   html:lang(zh-Hans) .section h2 {
