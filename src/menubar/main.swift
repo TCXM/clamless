@@ -1480,9 +1480,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let symbolName: String
         switch status.layout {
         case .connected:
-            symbolName = "macbook"
+            symbolName = "laptopcomputer"
         case .disconnected:
-            symbolName = "display"
+            symbolName = "laptopcomputer.slash"
         case .unknown:
             symbolName = "questionmark.square"
         }
