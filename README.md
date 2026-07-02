@@ -14,6 +14,7 @@
   </p>
 
   <p>
+    <a href="README.zh-CN.md">简体中文</a> ·
     <a href="https://clamless.yuxiaozhu.me/">Website</a> ·
     <a href="#install">Download</a> ·
     <a href="#menu-bar-app">Menu Bar App</a> ·

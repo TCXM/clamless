@@ -80,6 +80,11 @@ a {
   background: rgba(255, 255, 255, 0.06);
 }
 
+.language-link {
+  color: var(--text);
+  font-weight: 720;
+}
+
 .hero {
   position: relative;
   display: grid;
@@ -516,7 +521,7 @@ pre {
     min-height: 64px;
   }
 
-  .nav a:not(.nav-button) {
+  .nav a:not(.nav-button):not(.language-link) {
     display: none;
   }
 

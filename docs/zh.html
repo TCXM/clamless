@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh-Hans">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Clamless 可以在 MacBook 保持开盖时断开内置显示器，同时保留 Touch ID、摄像头、键盘和麦克风。">
+    <meta property="og:title" content="Clamless">
+    <meta property="og:description" content="开盖使用 MacBook，同时真正断开内置显示器。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://clamless.yuxiaozhu.me/zh.html">
+    <meta property="og:image" content="assets/clamless-icon.svg">
+    <meta property="og:locale" content="zh_CN">
+    <meta name="theme-color" content="#101820">
+    <title>Clamless - 开盖使用 MacBook，同时断开内置显示器</title>
+    <link rel="canonical" href="https://clamless.yuxiaozhu.me/zh.html">
+    <link rel="alternate" hreflang="en" href="https://clamless.yuxiaozhu.me/">
+    <link rel="alternate" hreflang="zh-Hans" href="https://clamless.yuxiaozhu.me/zh.html">
+    <link rel="alternate" hreflang="x-default" href="https://clamless.yuxiaozhu.me/">
+    <link rel="icon" href="assets/clamless-icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="zh.html">
+        <img src="assets/clamless-icon.svg" width="34" height="34" alt="">
+        <span>Clamless</span>
+      </a>
+      <nav class="nav" aria-label="主导航">
+        <a href="#install">安装</a>
+        <a href="#how">工作原理</a>
+        <a href="#limits">限制</a>
+        <a class="language-link" href="./" hreflang="en">English</a>
+        <a class="nav-button" href="https://github.com/TCXM/clamless">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-scene" aria-hidden="true">
+          <div class="display display-external">
+            <div class="display-toolbar">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <div class="display-line wide"></div>
+            <div class="display-line medium"></div>
+            <div class="display-grid">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+          <div class="laptop">
+            <div class="laptop-screen">
+              <div class="slash"></div>
+            </div>
+            <div class="laptop-base"></div>
+          </div>
+          <div class="desk-line"></div>
+        </div>
+
+        <div class="hero-content">
+          <p class="eyebrow">macOS Apple Silicon</p>
+          <h1 id="hero-title">开盖使用，只保留外接屏。</h1>
+          <p class="hero-copy">
+            Clamless 将 MacBook 内置显示器从 macOS 屏幕布局中断开，同时保留 Touch ID、摄像头、键盘和麦克风。
+          </p>
+          <div class="hero-actions">
+            <a class="primary-action" href="https://github.com/TCXM/clamless/releases/latest">下载 DMG</a>
+            <a class="secondary-action" href="#how">查看原理</a>
+          </div>
+          <dl class="hero-facts">
+            <div>
+              <dt>Layout</dt>
+              <dd>内屏移除</dd>
+            </div>
+            <div>
+              <dt>Panel</dt>
+              <dd>请求关闭</dd>
+            </div>
+            <div>
+              <dt>Control</dt>
+              <dd>菜单栏</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="section intro-section">
+        <div class="section-copy">
+          <p class="section-kicker">macOS 没有暴露的桌面模式</p>
+          <h2>不是调暗亮度。不是黑色遮罩。不是合盖模式。</h2>
+          <p>
+            Clamless 面向那些希望 MacBook 开盖放在桌面上，但不想让窗口、鼠标或显示器排列状态跑到内置屏幕上的用户。
+          </p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature">
+            <span class="feature-icon">01</span>
+            <h3>断开系统布局</h3>
+            <p>内置显示器会从 active WindowServer arrangement 中移除，所以鼠标不会进入内置屏幕。</p>
+          </article>
+          <article class="feature">
+            <span class="feature-icon">02</span>
+            <h3>关闭物理面板</h3>
+            <p>布局断开后，Clamless 会请求 Apple Silicon 内置面板 framebuffer 进入低功耗关闭状态。</p>
+          </article>
+          <article class="feature">
+            <span class="feature-icon">03</span>
+            <h3>优先安全恢复</h3>
+            <p>外接显示器消失时，Clamless 会优先恢复内置显示器，而不是信任可能过期的插拔状态。</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="install" class="section install-section">
+        <div class="section-copy">
+          <p class="section-kicker">安装</p>
+          <h2>安装一次，从菜单栏使用。</h2>
+          <p>
+            下载最新 DMG，把 Clamless 拖进 Applications，然后启动。当前公开构建是 ad-hoc 签名，首次启动时 macOS 可能需要你右键点击应用并选择打开。
+          </p>
+        </div>
+        <ol class="install-steps">
+          <li>
+            <span>下载</span>
+            <a href="https://github.com/TCXM/clamless/releases/latest">最新 release</a>
+          </li>
+          <li>
+            <span>安装</span>
+            <p>把 Clamless.app 拖进 Applications。</p>
+          </li>
+          <li>
+            <span>配置</span>
+            <p>在设置中选择允许自动开关的可信外接显示器。</p>
+          </li>
+        </ol>
+      </section>
+
+      <section id="how" class="section how-section">
+        <div class="section-copy">
+          <p class="section-kicker">工作原理</p>
+          <h2>两层显示系统，一个菜单栏开关。</h2>
+        </div>
+        <div class="timeline">
+          <article>
+            <h3>SkyLight 布局控制</h3>
+            <p>Clamless 使用私有 SkyLight 显示拓扑调用，在 active desktop arrangement 中 disable 或 enable 内置显示器。</p>
+          </article>
+          <article>
+            <h3>IOMobileFramebuffer 面板电源</h3>
+            <p>布局移除后，它会通过 Apple Silicon framebuffer API 请求面板电源状态变化，让内置面板变黑。</p>
+          </article>
+          <article>
+            <h3>Unplug 优先恢复</h3>
+            <p>自动恢复结合 1 秒轮询、显示器回调、IORegistry 事件和布局层安全检查，在外接显示器拔掉时恢复内置屏。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section command-section">
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <pre><code>clamless-display status
+clamless-display off --commit session
+clamless-display on --commit session</code></pre>
+        </div>
+        <div class="section-copy">
+          <p class="section-kicker">内置 CLI</p>
+          <h2>菜单不够时，也可以脚本化。</h2>
+          <p>
+            内置 helper 暴露了和菜单栏应用相同的显示控制路径，适合调试、自动化和检查当前显示状态。
+          </p>
+        </div>
+      </section>
+
+      <section id="limits" class="section limits-section">
+        <div class="section-copy">
+          <p class="section-kicker">现实边界</p>
+          <h2>实用工具，不是官方接口。</h2>
+          <p>
+            Clamless 依赖 macOS 私有 API。正因为如此，它才能实现系统设置没有提供的行为；但 Apple 也可能在未来 macOS 版本中修改这些接口。
+          </p>
+        </div>
+        <div class="limit-list">
+          <p>不收集 telemetry。</p>
+          <p>不是黑色遮罩窗口。</p>
+          <p>不是只把亮度调低。</p>
+          <p>不声称内置面板会从 IORegistry 消失。</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Clamless</span>
+      <a href="https://github.com/TCXM/clamless">GitHub</a>
+      <a href="https://github.com/TCXM/clamless/releases/latest">下载</a>
+      <a href="./" hreflang="en">English</a>
+      <a href="https://github.com/TCXM/clamless/blob/main/LICENSE">MIT License</a>
+    </footer>
+  </body>
+</html>
