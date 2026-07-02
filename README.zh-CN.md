@@ -146,13 +146,13 @@ open "$HOME/Applications/Clamless.app"
 公开 release 由 GitHub Actions 在推送版本 tag 时自动构建：
 
 ```sh
-git tag -a v0.1.5 -m "Clamless 0.1.5"
-git push origin v0.1.5
+git tag -a v0.1.6 -m "Clamless 0.1.6"
+git push origin v0.1.6
 ```
 
 release workflow 会在 macOS arm64 runner 上构建 DMG、校验 checksum、创建 GitHub Release，并上传 `.dmg` 和 `.sha256` 文件。
 
-如果 tag 在 workflow 加入前已经存在，可以手动运行 `Release` workflow，并把 `release_tag` 设置成已有 tag，例如 `v0.1.5`。
+如果 tag 在 workflow 加入前已经存在，可以手动运行 `Release` workflow，并把 `release_tag` 设置成已有 tag，例如 `v0.1.6`。
 
 本地测试打包：
 
