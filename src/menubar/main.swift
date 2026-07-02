@@ -1,4 +1,5 @@
 import Cocoa
+import Darwin
 import Foundation
 import IOKit
 import ServiceManagement
@@ -573,7 +574,7 @@ final class ClamlessHelper {
         return nil
     }
 
-    func run(_ arguments: [String]) -> HelperResult {
+    func run(_ arguments: [String], timeout: TimeInterval? = nil) -> HelperResult {
         let process = Process()
         process.executableURL = executableURL
         process.arguments = arguments
@@ -583,9 +584,29 @@ final class ClamlessHelper {
         process.standardOutput = stdout
         process.standardError = stderr
 
+        var didTimeOut = false
+        let terminationSemaphore: DispatchSemaphore?
+        if timeout != nil {
+            let semaphore = DispatchSemaphore(value: 0)
+            process.terminationHandler = { _ in
+                semaphore.signal()
+            }
+            terminationSemaphore = semaphore
+        } else {
+            terminationSemaphore = nil
+        }
+
         do {
             try process.run()
-            process.waitUntilExit()
+            if let timeout, let terminationSemaphore {
+                if terminationSemaphore.wait(timeout: .now() + timeout) == .timedOut {
+                    didTimeOut = true
+                    process.terminate()
+                    process.waitUntilExit()
+                }
+            } else {
+                process.waitUntilExit()
+            }
         } catch {
             return HelperResult(exitCode: 127, output: "", error: error.localizedDescription)
         }
@@ -593,9 +614,9 @@ final class ClamlessHelper {
         let outData = stdout.fileHandleForReading.readDataToEndOfFile()
         let errData = stderr.fileHandleForReading.readDataToEndOfFile()
         return HelperResult(
-            exitCode: process.terminationStatus,
+            exitCode: didTimeOut ? 124 : process.terminationStatus,
             output: String(data: outData, encoding: .utf8) ?? "",
-            error: String(data: errData, encoding: .utf8) ?? ""
+            error: didTimeOut ? "clamless-display timed out" : (String(data: errData, encoding: .utf8) ?? "")
         )
     }
 }
@@ -686,6 +707,12 @@ final class DisplayConnectionObserver {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private enum TerminationState {
+        case running
+        case restoring
+        case restored
+    }
+
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let menu = NSMenu()
     private let text = LocalizedText()
@@ -711,11 +738,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var pendingRestoreUnplugEvent: UInt64?
     private var pendingAutoOffPlugEvent: UInt64?
     private var settingsWindowController: SettingsWindowController?
+    private var terminationState = TerminationState.running
+    private var isTerminating = false
+    private var terminationSignalSources = [DispatchSourceSignal]()
     private let helper = ClamlessHelper()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         buildMenu()
+        registerTerminationSignalHandlers()
         registerDisplayCallback()
         displayConnectionObserver = DisplayConnectionObserver { [weak self] in
             self?.refreshAndApplyAutoSwitch()
@@ -727,6 +758,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             self?.refreshAndApplyAutoSwitch()
         }
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        switch terminationState {
+        case .running:
+            terminationState = .restoring
+            restoreBuiltInBeforeTermination(deadline: Date().addingTimeInterval(8)) { [weak self] in
+                guard let self else { return }
+                self.terminationState = .restored
+                sender.reply(toApplicationShouldTerminate: true)
+            }
+            return .terminateLater
+        case .restoring:
+            return .terminateCancel
+        case .restored:
+            return .terminateNow
+        }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+        for source in terminationSignalSources {
+            source.cancel()
+        }
+        terminationSignalSources.removeAll()
     }
 
     private func buildMenu() {
@@ -786,7 +843,80 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.terminate(nil)
     }
 
+    private func registerTerminationSignalHandlers() {
+        for signalNumber in [SIGTERM, SIGINT, SIGHUP] {
+            signal(signalNumber, SIG_IGN)
+            let source = DispatchSource.makeSignalSource(signal: signalNumber, queue: .main)
+            source.setEventHandler { [weak self] in
+                self?.handleTerminationSignal()
+            }
+            source.resume()
+            terminationSignalSources.append(source)
+        }
+    }
+
+    private func handleTerminationSignal() {
+        guard terminationState == .running else { return }
+        terminationState = .restoring
+        restoreBuiltInBeforeTermination(deadline: Date().addingTimeInterval(8)) {
+            exit(0)
+        }
+    }
+
+    private func restoreBuiltInBeforeTermination(deadline: Date, completion: @escaping () -> Void) {
+        isTerminating = true
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+        displayConnectionObserver = nil
+        pendingRestoreUnplugEvent = nil
+        pendingAutoOffPlugEvent = nil
+
+        if isBusy, Date() < deadline {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                guard let self else {
+                    completion()
+                    return
+                }
+                self.restoreBuiltInBeforeTermination(deadline: deadline, completion: completion)
+            }
+            return
+        }
+
+        guard let helper else {
+            completion()
+            return
+        }
+
+        isBusy = true
+        updateMenu()
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let statusResult = helper.run(["status"], timeout: 2)
+            let status = Self.parseStatus(statusResult.output + statusResult.error)
+            let shouldRestore = statusResult.exitCode != 0 ||
+                status.layout != .connected ||
+                status.needsOffRepair ||
+                self?.lastStatus.layout == .disconnected ||
+                self?.autoSettings.autoManagedOff == true
+
+            if shouldRestore {
+                _ = helper.run(["on", "--commit", "session"], timeout: 5)
+            }
+
+            DispatchQueue.main.async {
+                guard let self else {
+                    completion()
+                    return
+                }
+                self.isBusy = false
+                self.autoSettings.autoManagedOff = false
+                completion()
+            }
+        }
+    }
+
     private func runAction(name: String, arguments: [String], automatic: Bool) {
+        guard !isTerminating else { return }
         guard let helper else {
             showMessage(title: text.helperMissingTitle, text: text.helperMissingMessage)
             return
@@ -822,6 +952,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func refreshAndApplyAutoSwitch() {
+        guard !isTerminating else { return }
         refreshStatus { [weak self] status in
             self?.applyAutoSwitch(status: status)
         }
@@ -872,7 +1003,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func applyAutoSwitch(status: DisplayStatus) {
-        guard autoSettings.autoEnabled, helper != nil, !isBusy else {
+        guard autoSettings.autoEnabled, helper != nil, !isBusy, !isTerminating else {
             return
         }
 
