@@ -271,6 +271,39 @@ h1 {
   line-height: 0.94;
 }
 
+html:lang(zh-Hans) body {
+  line-height: 1.72;
+}
+
+html:lang(zh-Hans) h1 {
+  max-width: 430px;
+  font-size: 64px;
+  line-height: 1.12;
+}
+
+html:lang(zh-Hans) .hero-copy {
+  max-width: 640px;
+  line-height: 1.76;
+}
+
+html:lang(zh-Hans) .section h2 {
+  max-width: 780px;
+  font-size: 46px;
+  line-height: 1.18;
+}
+
+html:lang(zh-Hans) .section p,
+html:lang(zh-Hans) .feature p,
+html:lang(zh-Hans) .timeline p,
+html:lang(zh-Hans) .install-steps p {
+  line-height: 1.76;
+}
+
+html:lang(zh-Hans) .feature h3,
+html:lang(zh-Hans) .timeline h3 {
+  line-height: 1.3;
+}
+
 .hero-copy {
   max-width: 590px;
   margin: 28px 0 0;
@@ -555,8 +588,19 @@ pre {
     font-size: 68px;
   }
 
+  html:lang(zh-Hans) h1 {
+    max-width: 500px;
+    font-size: 52px;
+    line-height: 1.15;
+  }
+
   .section h2 {
     font-size: 44px;
+  }
+
+  html:lang(zh-Hans) .section h2 {
+    font-size: 38px;
+    line-height: 1.22;
   }
 
   .feature-grid,
@@ -579,6 +623,10 @@ pre {
     padding-inline: 18px;
   }
 
+  .nav {
+    gap: 14px;
+  }
+
   .brand span {
     font-size: 15px;
   }
@@ -599,8 +647,26 @@ pre {
     font-size: 56px;
   }
 
+  html:lang(zh-Hans) h1 {
+    font-size: 42px;
+    line-height: 1.2;
+  }
+
   .hero-copy {
     font-size: 18px;
+  }
+
+  html:lang(zh-Hans) .hero-copy {
+    font-size: 17px;
+  }
+
+  .hero-facts {
+    gap: 14px;
+  }
+
+  .hero-facts div {
+    flex: 1;
+    min-width: 0;
   }
 
   .hero-actions {
@@ -620,6 +686,10 @@ pre {
 
   .section h2 {
     font-size: 36px;
+  }
+
+  html:lang(zh-Hans) .section h2 {
+    font-size: 31px;
   }
 
   .install-steps li {

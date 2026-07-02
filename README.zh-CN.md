@@ -3,8 +3,8 @@
 
   <h1>Clamless</h1>
 
-  <p><strong>开盖使用 MacBook，同时真正断开内置显示器。</strong></p>
-  <p>保留 Touch ID、摄像头、键盘和麦克风，让 macOS 像只连接了外接显示器一样工作。</p>
+  <p><strong>开着 MacBook，只用外接显示器。</strong></p>
+  <p>不合盖，不调暗，不盖黑窗；Touch ID、摄像头、键盘和麦克风照常可用。</p>
 
   <p>
     <a href="https://github.com/TCXM/clamless/actions/workflows/release.yml"><img alt="Release" src="https://github.com/TCXM/clamless/actions/workflows/release.yml/badge.svg"></a>
@@ -24,31 +24,39 @@
   </p>
 </div>
 
+<p align="center">
+  <strong>语言：</strong>
+  <a href="README.md">English</a> ·
+  <a href="README.zh-CN.md">简体中文</a>
+</p>
+
 > [!NOTE]
-> Clamless 面向 Apple Silicon MacBook，要求 macOS 13 或更新版本。目前公开构建是 ad-hoc 签名，尚未 Apple notarize。首次启动时如果 macOS 提示来自未知开发者，请右键点击 `Clamless.app` 并选择 **打开**。
+> Clamless 面向 Apple Silicon MacBook，要求 macOS 13 或更新版本。当前公开构建是 ad-hoc 签名，还没有 Apple notarize。第一次打开时如果 macOS 拦截，请右键点击 `Clamless.app` 并选择 **打开**。
 
 ## 为什么需要它？
 
-macOS 提供了合盖模式、亮度调节和显示器排列设置，但这些都不是“保持 MacBook 开盖，同时把内置屏幕从桌面布局中移除”。
+很多外接屏用户只是想把 MacBook 打开放在桌上，继续用 Touch ID、摄像头、键盘和麦克风，但又不希望内置屏参与桌面布局。
 
-Clamless 适合桌面外接显示器场景：你希望 MacBook 保持开盖，以便继续使用 Touch ID、摄像头、键盘、麦克风或更好的散热，但又不想让窗口、鼠标或显示器排列跑到内置屏幕上。
+macOS 原生给你的选择通常是合盖、调亮度、或者手动改显示器排列。这些都不是同一件事：鼠标和窗口仍然可能跑进内屏，系统也没有真正把它从当前桌面布局里移除。
+
+Clamless 做的就是补上这个缺口：MacBook 保持开盖，macOS 只把外接显示器当作可用桌面。
 
 ## 它做了什么
 
-`clamless-display off` 会组合执行三件事：
+点击关闭内屏时，`clamless-display off` 会连续做三件事：
 
-1. 清理可能让 macOS 进入镜像/共享显示状态的 mirroring 配置。
+1. 清掉可能让 macOS 进入镜像/共享显示状态的 mirroring 配置。
 2. 将内置显示器从 macOS 当前 active screen arrangement 中移除。
 3. 请求 Apple Silicon 内置面板 framebuffer 进入低功耗/关闭状态。
 
-最终效果是：
+最终你会看到：
 
 - 外接显示器保持可用；
 - 内置显示器从鼠标和窗口布局中消失；
 - 鼠标不会再进入内置屏幕；
-- 内置面板会被请求关闭。
+- 内置面板会被请求熄屏。
 
-这接近 Lunar BlackOut / BetterDisplay 内置显示器 disconnect 的实际使用效果。
+实际体验接近 Lunar BlackOut / BetterDisplay 的内置显示器 disconnect 功能。
 
 ## 工作原理
 

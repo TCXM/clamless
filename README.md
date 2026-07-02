@@ -24,6 +24,12 @@
   </p>
 </div>
 
+<p align="center">
+  <strong>Languages:</strong>
+  <a href="README.md">English</a> ·
+  <a href="README.zh-CN.md">简体中文</a>
+</p>
+
 > [!NOTE]
 > Clamless targets Apple Silicon MacBooks on macOS 13 or newer. Current public builds are ad-hoc signed but not Apple-notarized yet, so first launch may require right-clicking the app and choosing **Open**.
 
