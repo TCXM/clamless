@@ -147,15 +147,15 @@ open "$HOME/Applications/Clamless.app"
 Public releases are built by GitHub Actions when a version tag is pushed:
 
 ```sh
-git tag -a v0.1.4 -m "Clamless 0.1.4"
-git push origin v0.1.4
+git tag -a v0.1.5 -m "Clamless 0.1.5"
+git push origin v0.1.5
 ```
 
 The release workflow builds the DMG on a macOS arm64 runner, verifies the
 checksum, creates a GitHub Release, and uploads the `.dmg` and `.sha256` files.
 
 If the tag already existed before the workflow was added, run the `Release`
-workflow manually and set `release_tag` to the existing tag, such as `v0.1.4`.
+workflow manually and set `release_tag` to the existing tag, such as `v0.1.5`.
 
 For local testing, run:
 
@@ -179,8 +179,7 @@ DMG is uploaded.
 The menu bar app exposes:
 
 - one switch that turns the built-in display off or on based on current state;
-- a settings window for automatic switching;
-- a manual update check that opens the latest GitHub Release when a newer version is available;
+- a settings window for automatic switching, login item control, and update checks;
 - a quit command.
 
 The menu bar title and menu text follow the user's preferred system language. Chinese is used for Chinese locales; English is used otherwise.

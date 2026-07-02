@@ -519,11 +519,13 @@ final class SettingsWindowController: NSWindowController {
     private let settings = AutoSwitchSettings.shared
     private let onChange: () -> Void
     private let stack = NSStackView()
+    private weak var checkUpdatesButton: NSButton?
+    private var isCheckingForUpdates = false
 
     init(onChange: @escaping () -> Void) {
         self.onChange = onChange
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 340),
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 360),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -617,6 +619,16 @@ final class SettingsWindowController: NSWindowController {
             stack.addArrangedSubview(indented(approvalStack))
         }
 
+        let checkUpdates = NSButton(
+            title: isCheckingForUpdates ? text.checkingForUpdates : text.checkForUpdates,
+            target: self,
+            action: #selector(checkForUpdates)
+        )
+        checkUpdates.bezelStyle = .rounded
+        checkUpdates.isEnabled = !isCheckingForUpdates
+        checkUpdatesButton = checkUpdates
+        stack.addArrangedSubview(checkUpdates)
+
         stack.addArrangedSubview(separator())
         let closeButton = NSButton(title: text.close, target: self, action: #selector(closeWindow))
         closeButton.bezelStyle = .rounded
@@ -672,6 +684,36 @@ final class SettingsWindowController: NSWindowController {
         SMAppService.openSystemSettingsLoginItems()
     }
 
+    @objc private func checkForUpdates() {
+        guard !isCheckingForUpdates else { return }
+
+        setCheckingForUpdates(true)
+
+        UpdateChecker.check { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.setCheckingForUpdates(false)
+
+                switch result {
+                case .success(.available(let info)):
+                    self.showUpdateAvailable(info)
+                case .success(.upToDate(let currentVersion)):
+                    self.showMessage(
+                        title: self.text.upToDateTitle,
+                        text: self.text.upToDateMessage(currentVersion: currentVersion),
+                        style: .informational
+                    )
+                case .failure(let error):
+                    self.showMessage(
+                        title: self.text.updateCheckFailedTitle,
+                        text: self.text.updateCheckFailedMessage(error.localizedDescription),
+                        style: .warning
+                    )
+                }
+            }
+        }
+    }
+
     @objc private func toggleDisplay(_ sender: NSButton) {
         guard let key = sender.identifier?.rawValue else { return }
         var allowed = settings.allowedDisplayKeys
@@ -688,6 +730,12 @@ final class SettingsWindowController: NSWindowController {
         window?.close()
     }
 
+    private func setCheckingForUpdates(_ checking: Bool) {
+        isCheckingForUpdates = checking
+        checkUpdatesButton?.title = checking ? text.checkingForUpdates : text.checkForUpdates
+        checkUpdatesButton?.isEnabled = !checking
+    }
+
     private func showLoginItemError(_ error: Error) {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
@@ -700,6 +748,33 @@ final class SettingsWindowController: NSWindowController {
         }
         if alert.runModal() == .alertSecondButtonReturn {
             SMAppService.openSystemSettingsLoginItems()
+        }
+    }
+
+    private func showMessage(title: String, text: String, style: NSAlert.Style) {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = text.isEmpty ? self.text.noMoreInfo : text
+        alert.alertStyle = style
+        alert.addButton(withTitle: self.text.ok)
+        alert.runModal()
+    }
+
+    private func showUpdateAvailable(_ info: UpdateInfo) {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = text.updateAvailableTitle
+        alert.informativeText = text.updateAvailableMessage(
+            latestVersion: info.latestVersion,
+            currentVersion: info.currentVersion
+        )
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: text.downloadUpdate)
+        alert.addButton(withTitle: text.later)
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            NSWorkspace.shared.open(info.releaseURL)
         }
     }
 }
@@ -868,7 +943,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let text = LocalizedText()
     private let autoSettings = AutoSwitchSettings.shared
     private var toggleItem = NSMenuItem()
-    private var checkUpdatesItem = NSMenuItem()
     private var lastStatus = DisplayStatus(
         layout: .unknown,
         online: nil,
@@ -881,7 +955,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rawText: ""
     )
     private var isBusy = false
-    private var isCheckingForUpdates = false
     private var refreshTimer: Timer?
     private var displayConnectionObserver: DisplayConnectionObserver?
     private var autoPausedAtPhysicalExternalCount: Int?
@@ -951,10 +1024,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let settings = NSMenuItem(title: text.settings, action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
-
-        checkUpdatesItem = NSMenuItem(title: text.checkForUpdates, action: #selector(checkForUpdates), keyEquivalent: "")
-        checkUpdatesItem.target = self
-        menu.addItem(checkUpdatesItem)
         menu.addItem(.separator())
 
         let quit = NSMenuItem(title: text.quit, action: #selector(quit), keyEquivalent: "q")
@@ -993,36 +1062,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         settingsWindowController?.showWindow(nil)
-    }
-
-    @objc private func checkForUpdates() {
-        guard !isCheckingForUpdates else { return }
-
-        isCheckingForUpdates = true
-        updateMenu()
-
-        UpdateChecker.check { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self else { return }
-                self.isCheckingForUpdates = false
-                self.updateMenu()
-
-                switch result {
-                case .success(.available(let info)):
-                    self.showUpdateAvailable(info)
-                case .success(.upToDate(let currentVersion)):
-                    self.showMessage(
-                        title: self.text.upToDateTitle,
-                        text: self.text.upToDateMessage(currentVersion: currentVersion)
-                    )
-                case .failure(let error):
-                    self.showMessage(
-                        title: self.text.updateCheckFailedTitle,
-                        text: self.text.updateCheckFailedMessage(error.localizedDescription)
-                    )
-                }
-            }
-        }
     }
 
     @objc private func quit() {
@@ -1435,9 +1474,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let canTurnOn = lastStatus.layout == .disconnected
         let canRefresh = lastStatus.layout == .unknown
         toggleItem.isEnabled = helperAvailable && !isBusy && (canTurnOff || canTurnOn || canRefresh)
-
-        checkUpdatesItem.title = isCheckingForUpdates ? text.checkingForUpdates : text.checkForUpdates
-        checkUpdatesItem.isEnabled = !isCheckingForUpdates
     }
 
     private func statusIcon(for status: DisplayStatus) -> NSImage? {
@@ -1467,23 +1503,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.alertStyle = .warning
         alert.addButton(withTitle: self.text.ok)
         alert.runModal()
-    }
-
-    private func showUpdateAvailable(_ info: UpdateInfo) {
-        NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.messageText = text.updateAvailableTitle
-        alert.informativeText = text.updateAvailableMessage(
-            latestVersion: info.latestVersion,
-            currentVersion: info.currentVersion
-        )
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: text.downloadUpdate)
-        alert.addButton(withTitle: text.later)
-
-        if alert.runModal() == .alertFirstButtonReturn {
-            NSWorkspace.shared.open(info.releaseURL)
-        }
     }
 }
 
