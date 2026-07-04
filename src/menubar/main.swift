@@ -955,7 +955,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rawText: ""
     )
     private var isBusy = false
+    // A full status refresh launches the helper and scans display hardware, so
+    // keep 1 Hz polling only while display state is settling.
+    private let activeRefreshInterval: TimeInterval = 1
+    private let idleRefreshInterval: TimeInterval = 30
+    private let displaySettleRefreshDuration: TimeInterval = 10
     private var refreshTimer: Timer?
+    private var refreshTimerInterval: TimeInterval?
+    private var fastRefreshUntil: Date?
+    private var scheduledRefreshGeneration = 0
+    private var isAutoRefreshInFlight = false
+    private var autoRefreshQueued = false
     private var displayConnectionObserver: DisplayConnectionObserver?
     private var autoPausedAtPhysicalExternalCount: Int?
     private var lastSeenHardwareUnplugEvent: UInt64?
@@ -974,15 +984,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registerTerminationSignalHandlers()
         registerDisplayCallback()
         displayConnectionObserver = DisplayConnectionObserver { [weak self] in
-            self?.refreshAndApplyAutoSwitch()
+            self?.scheduleDisplayChangeRefresh(after: 0)
         }
+        beginFastRefreshWindow()
         refreshStatus { [weak self] status in
             self?.markHardwareEventsSeen(status)
             self?.applyAutoSwitch(status: status)
+            self?.configureRefreshTimer()
         }
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            self?.refreshAndApplyAutoSwitch()
-        }
+        configureRefreshTimer()
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -1003,8 +1013,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        refreshTimer?.invalidate()
-        refreshTimer = nil
+        cancelScheduledRefresh()
+        invalidateRefreshTimer()
         for source in terminationSignalSources {
             source.cancel()
         }
@@ -1058,7 +1068,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func openSettings() {
         if settingsWindowController == nil {
             settingsWindowController = SettingsWindowController { [weak self] in
-                self?.refreshAndApplyAutoSwitch()
+                self?.handleSettingsChanged()
             }
         }
         settingsWindowController?.showWindow(nil)
@@ -1090,8 +1100,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func restoreBuiltInBeforeTermination(deadline: Date, completion: @escaping () -> Void) {
         isTerminating = true
-        refreshTimer?.invalidate()
-        refreshTimer = nil
+        cancelScheduledRefresh()
+        invalidateRefreshTimer()
         displayConnectionObserver = nil
         pendingRestoreUnplugEvent = nil
         pendingAutoOffPlugEvent = nil
@@ -1148,6 +1158,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         guard !isBusy else { return }
 
+        beginFastRefreshWindow()
+        configureRefreshTimer()
         isBusy = true
         updateMenu()
 
@@ -1171,15 +1183,129 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     if arguments.first == "on" || arguments.first == "off" {
                         self.markHardwareEventsSeen(status)
                     }
+                    self.configureRefreshTimer()
                 }
             }
         }
     }
 
+    private func handleSettingsChanged() {
+        guard !isTerminating else { return }
+
+        if autoSettings.autoEnabled {
+            scheduleDisplayChangeRefresh(after: 0)
+        } else {
+            cancelScheduledRefresh()
+            fastRefreshUntil = nil
+        }
+        configureRefreshTimer()
+    }
+
+    private func beginFastRefreshWindow(duration: TimeInterval? = nil) {
+        let until = Date().addingTimeInterval(duration ?? displaySettleRefreshDuration)
+        if fastRefreshUntil.map({ $0 < until }) ?? true {
+            fastRefreshUntil = until
+        }
+    }
+
+    private var needsFastRefresh: Bool {
+        if pendingRestoreUnplugEvent != nil || pendingAutoOffPlugEvent != nil {
+            return true
+        }
+        if let fastRefreshUntil, fastRefreshUntil > Date() {
+            return true
+        }
+        return false
+    }
+
+    private func desiredRefreshInterval() -> TimeInterval? {
+        guard autoSettings.autoEnabled, !isTerminating else {
+            return nil
+        }
+        return needsFastRefresh ? activeRefreshInterval : idleRefreshInterval
+    }
+
+    private func configureRefreshTimer() {
+        guard let interval = desiredRefreshInterval() else {
+            invalidateRefreshTimer()
+            return
+        }
+
+        if refreshTimer != nil, refreshTimerInterval == interval {
+            return
+        }
+
+        invalidateRefreshTimer()
+        let timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            self?.handleRefreshTimer()
+        }
+        timer.tolerance = interval == activeRefreshInterval ? 0.2 : min(5, interval * 0.2)
+        refreshTimer = timer
+        refreshTimerInterval = interval
+    }
+
+    private func invalidateRefreshTimer() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+        refreshTimerInterval = nil
+    }
+
+    private func handleRefreshTimer() {
+        guard !isTerminating else {
+            invalidateRefreshTimer()
+            return
+        }
+
+        if refreshTimerInterval == activeRefreshInterval, !needsFastRefresh {
+            configureRefreshTimer()
+            return
+        }
+
+        refreshAndApplyAutoSwitch()
+    }
+
+    private func scheduleDisplayChangeRefresh(after delay: TimeInterval, extendFastWindow: Bool = true) {
+        guard !isTerminating else { return }
+
+        if extendFastWindow {
+            beginFastRefreshWindow()
+        }
+        scheduledRefreshGeneration += 1
+        let generation = scheduledRefreshGeneration
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, self.scheduledRefreshGeneration == generation else { return }
+            self.refreshAndApplyAutoSwitch()
+        }
+        configureRefreshTimer()
+    }
+
+    private func cancelScheduledRefresh() {
+        scheduledRefreshGeneration += 1
+    }
+
     private func refreshAndApplyAutoSwitch() {
         guard !isTerminating else { return }
+        guard autoSettings.autoEnabled else {
+            configureRefreshTimer()
+            return
+        }
+
+        guard !isAutoRefreshInFlight else {
+            autoRefreshQueued = true
+            return
+        }
+
+        isAutoRefreshInFlight = true
         refreshStatus { [weak self] status in
-            self?.applyAutoSwitch(status: status)
+            guard let self else { return }
+            self.isAutoRefreshInFlight = false
+            self.applyAutoSwitch(status: status)
+            self.configureRefreshTimer()
+
+            if self.autoRefreshQueued {
+                self.autoRefreshQueued = false
+                self.scheduleDisplayChangeRefresh(after: 0.2, extendFastWindow: false)
+            }
         }
     }
 
@@ -1202,7 +1328,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            let result = helper.run(["status"])
+            let result = helper.run(["status"], timeout: 2)
             let status = Self.parseStatus(result.output + result.error)
             DispatchQueue.main.async {
                 guard let self else { return }
@@ -1364,7 +1490,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             let delegate = Unmanaged<AppDelegate>.fromOpaque(userInfo).takeUnretainedValue()
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                delegate.refreshAndApplyAutoSwitch()
+                delegate.scheduleDisplayChangeRefresh(after: 0)
             }
         }, pointer)
     }

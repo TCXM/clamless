@@ -153,15 +153,15 @@ open "$HOME/Applications/Clamless.app"
 Public releases are built by GitHub Actions when a version tag is pushed:
 
 ```sh
-git tag -a v0.1.6 -m "Clamless 0.1.6"
-git push origin v0.1.6
+git tag -a v0.1.7 -m "Clamless 0.1.7"
+git push origin v0.1.7
 ```
 
 The release workflow builds the DMG on a macOS arm64 runner, verifies the
 checksum, creates a GitHub Release, and uploads the `.dmg` and `.sha256` files.
 
 If the tag already existed before the workflow was added, run the `Release`
-workflow manually and set `release_tag` to the existing tag, such as `v0.1.6`.
+workflow manually and set `release_tag` to the existing tag, such as `v0.1.7`.
 
 For local testing, run:
 
@@ -210,7 +210,8 @@ names. Display keys for the whitelist are read from
 Automatic switching uses several signals because no single macOS display source
 is reliable in this state:
 
-- a 1-second status poll;
+- adaptive status polling: 1-second refreshes only while display state is
+  settling, then a slower heartbeat while automatic switching is enabled;
 - CoreGraphics display reconfiguration callbacks;
 - IORegistry interest notifications for display-port services;
 - lower-level `AppleATCDPAltModePort.EventLog` `Plug`/`Unplug` timestamps;
