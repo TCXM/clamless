@@ -52,6 +52,11 @@ typedef enum {
     COMMIT_APP_ONLY
 } CommitPreference;
 
+typedef struct {
+    CommitPreference preference;
+    CGDirectDisplayID display_id_hint;
+} CommandOptions;
+
 static int commit_options_for_preference(CommitPreference preference,
                                          CGConfigureOption *options,
                                          size_t max_options);
@@ -182,6 +187,30 @@ static bool dict_get_i64(CFDictionaryRef dict, const char *key, int64_t *out) {
     CFTypeRef value = CFDictionaryGetValue(dict, cf_key);
     CFRelease(cf_key);
     return cf_number_to_i64(value, out);
+}
+
+static bool dict_get_bool(CFDictionaryRef dict, const char *key, bool *out) {
+    CFStringRef cf_key = CFStringCreateWithCString(NULL, key, kCFStringEncodingUTF8);
+    if (!cf_key) {
+        return false;
+    }
+    CFTypeRef value = CFDictionaryGetValue(dict, cf_key);
+    CFRelease(cf_key);
+
+    if (!value) {
+        return false;
+    }
+    if (CFGetTypeID(value) == CFBooleanGetTypeID()) {
+        *out = CFBooleanGetValue((CFBooleanRef)value);
+        return true;
+    }
+
+    int64_t number = 0;
+    if (cf_number_to_i64(value, &number)) {
+        *out = number != 0;
+        return true;
+    }
+    return false;
 }
 
 static bool get_io_name_matched(io_service_t service, char *buf, size_t len) {
@@ -448,6 +477,168 @@ static bool connection_mapping_entry_is_display(CFDictionaryRef entry) {
            height > 0;
 }
 
+static bool display_hints_indicate_display(CFDictionaryRef hints) {
+    bool valid = true;
+    if (dict_get_bool(hints, "Valid", &valid) && !valid) {
+        return false;
+    }
+
+    return connection_mapping_entry_is_display(hints);
+}
+
+static bool service_display_hints_active(io_service_t service) {
+    CFTypeRef hints = copy_prop(service, "DisplayHints");
+    bool active = hints &&
+                  CFGetTypeID(hints) == CFDictionaryGetTypeID() &&
+                  display_hints_indicate_display((CFDictionaryRef)hints);
+    if (hints) {
+        CFRelease(hints);
+    }
+    return active;
+}
+
+static bool event_payload_live_state(CFDictionaryRef payload, bool *live) {
+    char action[64] = {0};
+    if (dict_get_string(payload, "Action", action, sizeof(action))) {
+        if (strcmp(action, "Plug") == 0 || strcmp(action, "DisplayRequest") == 0) {
+            *live = true;
+            return true;
+        }
+        if (strcmp(action, "Unplug") == 0 || strcmp(action, "DisplayRelease") == 0) {
+            *live = false;
+            return true;
+        }
+    }
+
+    bool valid = false;
+    if (dict_get_bool(payload, "Valid", &valid)) {
+        *live = valid && display_hints_indicate_display(payload);
+        return true;
+    }
+
+    char state[64] = {0};
+    int64_t value = -1;
+    if (!dict_get_string(payload, "State", state, sizeof(state)) ||
+        !dict_get_i64(payload, "Value", &value)) {
+        return false;
+    }
+
+    if (strcmp(state, "SinkActive") == 0 ||
+        strcmp(state, "Activate") == 0 ||
+        strcmp(state, "LinkRate") == 0 ||
+        strcmp(state, "LaneCount") == 0) {
+        *live = value > 0;
+        return true;
+    }
+
+    return false;
+}
+
+static bool service_event_log_active(io_service_t service, bool *known) {
+    *known = false;
+
+    CFTypeRef event_log = copy_prop(service, "EventLog");
+    if (!event_log || CFGetTypeID(event_log) != CFArrayGetTypeID()) {
+        if (event_log) {
+            CFRelease(event_log);
+        }
+        return false;
+    }
+
+    bool live = false;
+    CFArrayRef events = (CFArrayRef)event_log;
+    CFIndex count = CFArrayGetCount(events);
+    for (CFIndex i = 0; i < count; i++) {
+        CFTypeRef entry_value = CFArrayGetValueAtIndex(events, i);
+        if (!entry_value || CFGetTypeID(entry_value) != CFDictionaryGetTypeID()) {
+            continue;
+        }
+
+        CFTypeRef payload_value =
+            CFDictionaryGetValue((CFDictionaryRef)entry_value, CFSTR("EventPayload"));
+        if (!payload_value || CFGetTypeID(payload_value) != CFDictionaryGetTypeID()) {
+            continue;
+        }
+
+        bool next_live = false;
+        if (event_payload_live_state((CFDictionaryRef)payload_value, &next_live)) {
+            live = next_live;
+            *known = true;
+        }
+    }
+
+    CFRelease(event_log);
+    return live;
+}
+
+static bool display_link_service_is_active(io_service_t service) {
+    if (service_display_hints_active(service)) {
+        return true;
+    }
+
+    bool known = false;
+    bool active = service_event_log_active(service, &known);
+    return known && active;
+}
+
+static int live_external_link_count_for_class(const char *class_name, bool *saw_services) {
+    *saw_services = false;
+
+    CFMutableDictionaryRef match = IOServiceMatching(class_name);
+    if (!match) {
+        return -1;
+    }
+
+    io_iterator_t iter = IO_OBJECT_NULL;
+    kern_return_t kr = IOServiceGetMatchingServices(kIOMainPortDefault, match, &iter);
+    if (kr != KERN_SUCCESS) {
+        return -1;
+    }
+
+    int total = 0;
+    io_service_t service;
+    while ((service = IOIteratorNext(iter))) {
+        *saw_services = true;
+        if (display_link_service_is_active(service)) {
+            total++;
+        }
+        IOObjectRelease(service);
+    }
+
+    IOObjectRelease(iter);
+    return total;
+}
+
+static int live_external_link_count(void) {
+    bool saw_remote_ports = false;
+    int remote_port_count =
+        live_external_link_count_for_class("AppleDCPDPTXRemotePortUFP", &saw_remote_ports);
+    if (remote_port_count >= 0 && saw_remote_ports) {
+        return remote_port_count;
+    }
+
+    bool saw_alt_mode_ports = false;
+    int alt_mode_count =
+        live_external_link_count_for_class("AppleATCDPAltModePort", &saw_alt_mode_ports);
+    if (alt_mode_count >= 0 && saw_alt_mode_ports) {
+        return alt_mode_count;
+    }
+
+    if (remote_port_count >= 0) {
+        return remote_port_count;
+    }
+    return alt_mode_count;
+}
+
+static void print_count_value(const char *name, int value) {
+    printf(" %s=", name);
+    if (value >= 0) {
+        printf("%d", value);
+    } else {
+        printf("unknown");
+    }
+}
+
 static int physical_external_count(void) {
     CFMutableDictionaryRef match = IOServiceMatching("AppleDisplayConnectionManager");
     if (!match) {
@@ -639,10 +830,14 @@ static void print_event_time(const char *name, int64_t value) {
     }
 }
 
-static CGDirectDisplayID find_builtin_display(SkyLightAPI *sky) {
+static CGDirectDisplayID find_builtin_display(SkyLightAPI *sky, CGDirectDisplayID display_id_hint) {
     CGDirectDisplayID *displays = NULL;
     uint32_t count = 0;
     if (collect_sls_displays(sky, &displays, &count) != 0) {
+        if (display_id_hint != 0) {
+            fprintf(stderr, "built-in display using supplied id hint=%u\n", display_id_hint);
+            return display_id_hint;
+        }
         return 0;
     }
 
@@ -659,8 +854,30 @@ static CGDirectDisplayID find_builtin_display(SkyLightAPI *sky) {
         return found;
     }
 
+    count = 0;
+    if (CGGetOnlineDisplayList(0, NULL, &count) == kCGErrorSuccess && count > 0) {
+        displays = calloc(count, sizeof(CGDirectDisplayID));
+        if (displays &&
+            CGGetOnlineDisplayList(count, displays, &count) == kCGErrorSuccess) {
+            for (uint32_t i = 0; i < count; i++) {
+                if (CGDisplayIsBuiltin(displays[i])) {
+                    found = displays[i];
+                    break;
+                }
+            }
+        }
+        free(displays);
+        if (found) {
+            return found;
+        }
+    }
+
     IOMFBAPI iomfb;
     if (!load_iomfb(&iomfb) || !iomfb.get_id) {
+        if (display_id_hint != 0) {
+            fprintf(stderr, "built-in display using supplied id hint=%u\n", display_id_hint);
+            return display_id_hint;
+        }
         return 0;
     }
 
@@ -674,6 +891,10 @@ static CGDirectDisplayID find_builtin_display(SkyLightAPI *sky) {
     int index = find_builtin_iomfb_index(services, service_count);
     if (index < 0) {
         release_iomfb_services(services, service_count);
+        if (display_id_hint != 0) {
+            fprintf(stderr, "built-in display using supplied id hint=%u\n", display_id_hint);
+            return display_id_hint;
+        }
         return 0;
     }
 
@@ -681,6 +902,10 @@ static CGDirectDisplayID find_builtin_display(SkyLightAPI *sky) {
     kern_return_t kr = iomfb.open(services[index], mach_task_self(), 0, &fb);
     if (kr != KERN_SUCCESS || !fb) {
         release_iomfb_services(services, service_count);
+        if (display_id_hint != 0) {
+            fprintf(stderr, "built-in display using supplied id hint=%u\n", display_id_hint);
+            return display_id_hint;
+        }
         return 0;
     }
 
@@ -688,6 +913,10 @@ static CGDirectDisplayID find_builtin_display(SkyLightAPI *sky) {
     kr = iomfb.get_id(fb, &fb_id);
     release_iomfb_services(services, service_count);
     if (kr != KERN_SUCCESS || fb_id == 0) {
+        if (display_id_hint != 0) {
+            fprintf(stderr, "built-in display using supplied id hint=%u\n", display_id_hint);
+            return display_id_hint;
+        }
         return 0;
     }
 
@@ -783,28 +1012,42 @@ static int clear_mirroring(SkyLightAPI *sky, CommitPreference preference) {
     return 1;
 }
 
-static int parse_commit_preference(int argc, char **argv, CommitPreference *preference) {
-    *preference = COMMIT_AUTO;
+static int parse_command_options(int argc, char **argv, CommandOptions *options) {
+    options->preference = COMMIT_AUTO;
+    options->display_id_hint = 0;
     for (int i = 2; i < argc; i++) {
-        if (strcmp(argv[i], "--commit") != 0) {
-            fprintf(stderr, "unknown option: %s\n", argv[i]);
-            return 2;
-        }
-        if (i + 1 >= argc) {
-            fprintf(stderr, "--commit requires session, permanent, app-only, or auto\n");
-            return 2;
-        }
-        const char *value = argv[++i];
-        if (strcmp(value, "auto") == 0) {
-            *preference = COMMIT_AUTO;
-        } else if (strcmp(value, "session") == 0) {
-            *preference = COMMIT_SESSION;
-        } else if (strcmp(value, "permanent") == 0) {
-            *preference = COMMIT_PERMANENT;
-        } else if (strcmp(value, "app-only") == 0) {
-            *preference = COMMIT_APP_ONLY;
+        if (strcmp(argv[i], "--commit") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "--commit requires session, permanent, app-only, or auto\n");
+                return 2;
+            }
+            const char *value = argv[++i];
+            if (strcmp(value, "auto") == 0) {
+                options->preference = COMMIT_AUTO;
+            } else if (strcmp(value, "session") == 0) {
+                options->preference = COMMIT_SESSION;
+            } else if (strcmp(value, "permanent") == 0) {
+                options->preference = COMMIT_PERMANENT;
+            } else if (strcmp(value, "app-only") == 0) {
+                options->preference = COMMIT_APP_ONLY;
+            } else {
+                fprintf(stderr, "invalid --commit value: %s\n", value);
+                return 2;
+            }
+        } else if (strcmp(argv[i], "--display-id") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "--display-id requires a numeric display id\n");
+                return 2;
+            }
+            char *end = NULL;
+            unsigned long value = strtoul(argv[++i], &end, 0);
+            if (end == argv[i] || *end != '\0' || value == 0 || value > UINT32_MAX) {
+                fprintf(stderr, "invalid --display-id value: %s\n", argv[i]);
+                return 2;
+            }
+            options->display_id_hint = (CGDirectDisplayID)value;
         } else {
-            fprintf(stderr, "invalid --commit value: %s\n", value);
+            fprintf(stderr, "unknown option: %s\n", argv[i]);
             return 2;
         }
     }
@@ -979,7 +1222,8 @@ static int command_status(void) {
     }
 
     int physical = physical_external_count();
-    CGDirectDisplayID builtin = find_builtin_display(&sky);
+    int live = live_external_link_count();
+    CGDirectDisplayID builtin = find_builtin_display(&sky, 0);
     if (builtin) {
         printf("summary: built-in layout=%s online=%s mirror=%s active_external_count=%d physical_external_count=",
                is_active_display(builtin) ? "connected" : "disconnected",
@@ -987,10 +1231,12 @@ static int command_status(void) {
                yes_no(any_display_has_mirror_state(&sky)),
                active_external_count());
         if (physical >= 0) {
-            printf("%d\n", physical);
+            printf("%d", physical);
         } else {
-            printf("unknown\n");
+            printf("unknown");
         }
+        print_count_value("live_external_count", live);
+        printf("\n");
     } else {
         printf("summary: built-in display not found by CoreGraphics\n");
     }
@@ -1001,6 +1247,7 @@ static int command_status(void) {
     } else {
         printf("unknown");
     }
+    print_count_value("live_external_count", live);
     print_hardware_external_keys();
     int64_t last_unplug_event = -1;
     int64_t last_plug_event = -1;
@@ -1054,13 +1301,25 @@ static int command_status(void) {
     return 0;
 }
 
-static int command_layout(bool enabled, CommitPreference preference) {
+static int command_link_probe(void) {
+    int live = live_external_link_count();
+    printf("probe: live_external_count=");
+    if (live >= 0) {
+        printf("%d", live);
+    } else {
+        printf("unknown");
+    }
+    printf("\n");
+    return live >= 0 ? 0 : 2;
+}
+
+static int command_layout(bool enabled, CommitPreference preference, CGDirectDisplayID display_id_hint) {
     SkyLightAPI sky;
     if (!load_skylight(&sky)) {
         return 2;
     }
 
-    CGDirectDisplayID builtin = find_builtin_display(&sky);
+    CGDirectDisplayID builtin = find_builtin_display(&sky, enabled ? display_id_hint : 0);
     if (!builtin) {
         fprintf(stderr, "built-in display was not found\n");
         return 2;
@@ -1096,7 +1355,7 @@ static int command_off(CommitPreference preference) {
     }
     usleep(1200000);
 
-    int layout_rc = command_layout(false, preference);
+    int layout_rc = command_layout(false, preference, 0);
     if (layout_rc != 0) {
         return layout_rc;
     }
@@ -1106,33 +1365,46 @@ static int command_off(CommitPreference preference) {
     return panel_rc;
 }
 
-static int command_on(CommitPreference preference) {
+static int command_on(CommitPreference preference, CGDirectDisplayID display_id_hint) {
     int panel_rc = request_builtin_panel_power(1);
     usleep(700000);
 
-    int layout_rc = command_layout(true, preference);
-    if (layout_rc != 0) {
-        fprintf(stderr,
-                "layout reconnect failed; panel wake was still requested. "
-                "Use macOS Display Settings, a lid close/open cycle, or cable reconnect if the layout stays disconnected.\n");
-        return layout_rc;
+    int layout_rc = 2;
+    const int attempts = 7;
+    for (int attempt = 1; attempt <= attempts; attempt++) {
+        layout_rc = command_layout(true, preference, display_id_hint);
+        if (layout_rc == 0) {
+            return panel_rc;
+        }
+
+        fprintf(stderr, "layout reconnect attempt %d/%d failed\n", attempt, attempts);
+        if (attempt == 3 || attempt == 5) {
+            (void)request_builtin_panel_power(1);
+        }
+        if (attempt < attempts) {
+            usleep(500000);
+        }
     }
 
-    return panel_rc;
+    fprintf(stderr,
+            "layout reconnect failed after panel wake. "
+            "Use macOS Display Settings, a lid close/open cycle, or cable reconnect if the layout stays disconnected.\n");
+    return layout_rc;
 }
 
 static void usage(const char *argv0) {
     fprintf(stderr,
             "usage:\n"
             "  %s status\n"
+            "  %s link-probe\n"
             "  %s off [--commit auto|session|permanent|app-only]\n"
-            "  %s on [--commit auto|session|permanent|app-only]\n"
+            "  %s on [--commit auto|session|permanent|app-only] [--display-id id]\n"
             "  %s layout-off [--commit auto|session|permanent|app-only]\n"
-            "  %s layout-on [--commit auto|session|permanent|app-only]\n"
+            "  %s layout-on [--commit auto|session|permanent|app-only] [--display-id id]\n"
             "  %s panel-off\n"
             "  %s panel-on\n"
             "  %s panel-request <value>\n",
-            argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0);
+            argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0);
 }
 
 int main(int argc, char **argv) {
@@ -1143,6 +1415,10 @@ int main(int argc, char **argv) {
 
     if (strcmp(argv[1], "status") == 0) {
         return command_status();
+    }
+
+    if (strcmp(argv[1], "link-probe") == 0) {
+        return command_link_probe();
     }
 
     if (strcmp(argv[1], "panel-off") == 0) {
@@ -1162,26 +1438,26 @@ int main(int argc, char **argv) {
         return request_builtin_panel_power(value);
     }
 
-    CommitPreference preference = COMMIT_AUTO;
-    int parse_rc = parse_commit_preference(argc, argv, &preference);
+    CommandOptions options;
+    int parse_rc = parse_command_options(argc, argv, &options);
     if (parse_rc != 0) {
         return parse_rc;
     }
 
     if (strcmp(argv[1], "off") == 0) {
-        return command_off(preference);
+        return command_off(options.preference);
     }
 
     if (strcmp(argv[1], "on") == 0) {
-        return command_on(preference);
+        return command_on(options.preference, options.display_id_hint);
     }
 
     if (strcmp(argv[1], "layout-off") == 0) {
-        return command_layout(false, preference);
+        return command_layout(false, options.preference, 0);
     }
 
     if (strcmp(argv[1], "layout-on") == 0) {
-        return command_layout(true, preference);
+        return command_layout(true, options.preference, options.display_id_hint);
     }
 
     usage(argv[0]);

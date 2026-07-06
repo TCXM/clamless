@@ -153,15 +153,15 @@ open "$HOME/Applications/Clamless.app"
 Public releases are built by GitHub Actions when a version tag is pushed:
 
 ```sh
-git tag -a v0.1.7 -m "Clamless 0.1.7"
-git push origin v0.1.7
+git tag -a v0.1.8 -m "Clamless 0.1.8"
+git push origin v0.1.8
 ```
 
 The release workflow builds the DMG on a macOS arm64 runner, verifies the
 checksum, creates a GitHub Release, and uploads the `.dmg` and `.sha256` files.
 
 If the tag already existed before the workflow was added, run the `Release`
-workflow manually and set `release_tag` to the existing tag, such as `v0.1.7`.
+workflow manually and set `release_tag` to the existing tag, such as `v0.1.8`.
 
 For local testing, run:
 

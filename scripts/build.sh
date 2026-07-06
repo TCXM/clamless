@@ -21,6 +21,7 @@ clang "$ROOT/src/helper/clamless-display.c" \
 
 swiftc "$ROOT/src/menubar/main.swift" \
   -o "$APP/Contents/MacOS/ClamlessMenu" \
+  -framework Carbon \
   -framework Cocoa \
   -framework IOKit \
   -framework ServiceManagement

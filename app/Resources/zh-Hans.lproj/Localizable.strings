@@ -19,6 +19,11 @@
 "settings_title" = "Clamless 设置";
 "automatic_switching_section" = "自动开关";
 "general_section" = "通用";
+"keyboard_shortcut_section" = "快捷键";
+"toggle_shortcut" = "切换内屏";
+"record_shortcut" = "录制快捷键";
+"record_shortcut_prompt" = "按下快捷键";
+"clear_shortcut" = "清空";
 "auto_switch_enabled" = "启用自动开关";
 "open_at_login" = "开机自启";
 "login_item_requires_approval" = "需要在系统设置中批准。";

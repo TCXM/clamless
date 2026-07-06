@@ -19,6 +19,11 @@
 "settings_title" = "Clamless Settings";
 "automatic_switching_section" = "Automatic Switching";
 "general_section" = "General";
+"keyboard_shortcut_section" = "Keyboard Shortcut";
+"toggle_shortcut" = "Toggle Built-in Display";
+"record_shortcut" = "Record Shortcut";
+"record_shortcut_prompt" = "Press Shortcut";
+"clear_shortcut" = "Clear";
 "auto_switch_enabled" = "Enable Automatic Switching";
 "open_at_login" = "Open at Login";
 "login_item_requires_approval" = "Needs approval in System Settings.";
